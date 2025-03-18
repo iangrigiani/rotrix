@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tetris Rotativo</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #1a1a1a;
+        }
+        canvas {
+            border: 2px solid #333;
+        }
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        .controls {
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div class="controls">
+            <p>Controles:</p>
+            <p>← → : Mover pieza</p>
+            <p>↑ : Rotar pieza</p>
+            <p>↓ : Caída rápida</p>
+        </div>
+    </div>
+    <script src="tetris.js"></script>
+</body>
+</html> 
