@@ -21,6 +21,16 @@ export class RotrixGame {
         this.isInvertedMode = false;
         this.gameOver = false;
         
+        this.score = 0;
+        this.scoreDisplay = document.getElementById('scoreDisplay');
+        this.tickPoints = 10;
+        this.linePoints = {
+            1: 200,
+            2: 425,
+            3: 675,
+            4: 1000
+        };
+        
         this.init();
     }
 
@@ -53,7 +63,13 @@ export class RotrixGame {
             this.piece.position = newPos;
         } else if (dy === this.gravity) {
             this.board.mergePiece(this.piece);
-            this.board.checkLines(this.isInvertedMode);
+            const linesCleared = this.board.checkLines(this.isInvertedMode);
+            
+            // Actualizar puntaje por líneas eliminadas
+            if (linesCleared > 0) {
+                this.updateScore(this.linePoints[linesCleared] || this.linePoints[1] * linesCleared);
+            }
+            
             this.piecesPlaced++;
             
             if (this.piecesPlaced % this.switchInterval === 0) {
@@ -169,6 +185,8 @@ export class RotrixGame {
         this.isInvertedMode = false;
         this.gravity = 1;
         this.gameOver = false;
+        this.score = 0;
+        this.updateScore(0);
         this.spawnPiece();
         this.draw();
         this.gameLoop();
@@ -191,11 +209,17 @@ export class RotrixGame {
         }
         
         this.movePiece(0, this.gravity);
+        this.updateScore(this.tickPoints); // Puntos por tick
         this.draw();
         
         if (!this.gameOver) {
             this.loopTimeout = setTimeout(() => this.gameLoop(), this.dropSpeed);
         }
+    }
+
+    updateScore(points) {
+        this.score += points;
+        this.scoreDisplay.textContent = this.score;
     }
 }
 

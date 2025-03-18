@@ -49,8 +49,11 @@ export class Renderer {
         this.ctx.fillStyle = 'white';
         this.ctx.font = '30px Arial';
         this.ctx.textAlign = 'center';
-        this.ctx.fillText('¡GAME OVER!', this.canvas.width / 2, this.canvas.height / 2);
+        this.ctx.fillText('¡GAME OVER!', this.canvas.width / 2, this.canvas.height / 2 - 20);
+        this.ctx.font = '24px Arial';
+        this.ctx.fillText(`Puntaje Final: ${document.getElementById('scoreDisplay').textContent}`, 
+            this.canvas.width / 2, this.canvas.height / 2 + 20);
         this.ctx.font = '20px Arial';
-        this.ctx.fillText('Presiona ENTER para reiniciar', this.canvas.width / 2, this.canvas.height / 2 + 40);
+        this.ctx.fillText('Presiona ENTER para reiniciar', this.canvas.width / 2, this.canvas.height / 2 + 60);
     }
 } 
