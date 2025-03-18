@@ -1,0 +1,11 @@
+{
+  "name": "rotrix",
+  "version": "1.0.0",
+  "description": "A block-stacking puzzle game with gravity-switching mechanic",
+  "scripts": {
+    "start": "http-server -c-1"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+} 
