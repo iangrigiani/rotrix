@@ -2,9 +2,14 @@ import { Board } from './game/Board.js';
 import { Piece } from './game/Piece.js';
 import { Controls } from './game/Controls.js';
 import { Renderer } from './game/Renderer.js';
+import { GAME_CONFIG } from './config/gameConfig.js';
 
 export class RotrixGame {
-    constructor(width = 10, height = 20, blockSize = 30) {
+    constructor(
+        width = GAME_CONFIG.DEFAULT_WIDTH, 
+        height = GAME_CONFIG.DEFAULT_HEIGHT, 
+        blockSize = GAME_CONFIG.DEFAULT_BLOCK_SIZE
+    ) {
         this.canvas = document.getElementById('gameCanvas');
         this.canvas.width = width * blockSize;
         this.canvas.height = height * blockSize;
@@ -15,23 +20,44 @@ export class RotrixGame {
         this.controls = new Controls(this);
 
         this.piecesPlaced = 0;
-        this.switchInterval = 5;
+        this.switchInterval = GAME_CONFIG.GRAVITY_SWITCH_INTERVAL;
         this.gravity = 1;
-        this.dropSpeed = 200;
+        this.dropSpeed = GAME_CONFIG.INITIAL_SPEED;
         this.isInvertedMode = false;
         this.gameOver = false;
         
         this.score = 0;
+        this.level = 1;
         this.scoreDisplay = document.getElementById('scoreDisplay');
-        this.tickPoints = 10;
-        this.linePoints = {
-            1: 200,
-            2: 425,
-            3: 675,
-            4: 1000
-        };
+        this.levelDisplay = document.getElementById('levelDisplay');
         
         this.init();
+    }
+
+    calculateRequiredPoints(level) {
+        return Math.floor(GAME_CONFIG.POINTS_BASE * 
+            Math.pow(GAME_CONFIG.POINTS_MULTIPLIER, level - 1));
+    }
+
+    calculateSpeed(level) {
+        return Math.max(
+            GAME_CONFIG.SPEED_MIN,
+            Math.floor(GAME_CONFIG.INITIAL_SPEED * 
+                Math.pow(GAME_CONFIG.SPEED_MULTIPLIER, level - 1))
+        );
+    }
+
+    checkLevelUp() {
+        if (this.level >= GAME_CONFIG.MAX_LEVEL) return;
+
+        const nextLevelPoints = this.calculateRequiredPoints(this.level + 1);
+        if (this.score >= nextLevelPoints) {
+            this.level++;
+            this.levelDisplay.textContent = this.level;
+            this.dropSpeed = this.calculateSpeed(this.level);
+            
+            this.renderer.showLevelUp(this.level, () => this.draw());
+        }
     }
 
     init() {
@@ -67,7 +93,8 @@ export class RotrixGame {
             
             // Actualizar puntaje por líneas eliminadas
             if (linesCleared > 0) {
-                this.updateScore(this.linePoints[linesCleared] || this.linePoints[1] * linesCleared);
+                this.updateScore(GAME_CONFIG.LINE_POINTS[linesCleared] || 
+                    GAME_CONFIG.LINE_POINTS[1] * linesCleared);
             }
             
             this.piecesPlaced++;
@@ -186,7 +213,10 @@ export class RotrixGame {
         this.gravity = 1;
         this.gameOver = false;
         this.score = 0;
+        this.level = 1;
+        this.dropSpeed = GAME_CONFIG.INITIAL_SPEED;
         this.updateScore(0);
+        this.levelDisplay.textContent = this.level;
         this.spawnPiece();
         this.draw();
         this.gameLoop();
@@ -209,7 +239,7 @@ export class RotrixGame {
         }
         
         this.movePiece(0, this.gravity);
-        this.updateScore(this.tickPoints); // Puntos por tick
+        this.updateScore(GAME_CONFIG.TICK_POINTS); // Puntos por tick
         this.draw();
         
         if (!this.gameOver) {
@@ -220,6 +250,7 @@ export class RotrixGame {
     updateScore(points) {
         this.score += points;
         this.scoreDisplay.textContent = this.score;
+        this.checkLevelUp();
     }
 }
 

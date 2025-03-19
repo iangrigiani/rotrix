@@ -28,11 +28,21 @@
             font-size: 24px;
             margin-bottom: 20px;
         }
+        .game-info {
+            color: white;
+            font-size: 24px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 40px;
+        }
     </style>
 </head>
 <body>
     <div class="game-container">
-        <div class="score">Score: <span id="scoreDisplay">0</span></div>
+        <div class="game-info">
+            <div class="score">Score: <span id="scoreDisplay">0</span></div>
+            <div class="level">Level: <span id="levelDisplay">1</span></div>
+        </div>
         <canvas id="gameCanvas"></canvas>
         <div class="controls">
             <p>Controles:</p>
