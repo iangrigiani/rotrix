@@ -20,7 +20,7 @@ export class RotrixGame {
         this.controls = new Controls(this);
 
         this.piecesPlaced = 0;
-        this.switchInterval = GAME_CONFIG.GRAVITY_SWITCH_INTERVAL;
+        this.nextGravitySwitch = this.calculateNextGravitySwitch();
         this.gravity = 1;
         this.dropSpeed = GAME_CONFIG.INITIAL_SPEED;
         this.isInvertedMode = false;
@@ -91,7 +91,6 @@ export class RotrixGame {
             this.board.mergePiece(this.piece);
             const linesCleared = this.board.checkLines(this.isInvertedMode);
             
-            // Actualizar puntaje por líneas eliminadas
             if (linesCleared > 0) {
                 this.updateScore(GAME_CONFIG.LINE_POINTS[linesCleared] || 
                     GAME_CONFIG.LINE_POINTS[1] * linesCleared);
@@ -99,8 +98,10 @@ export class RotrixGame {
             
             this.piecesPlaced++;
             
-            if (this.piecesPlaced % this.switchInterval === 0) {
+            if (this.piecesPlaced >= this.nextGravitySwitch) {
                 this.switchGravity();
+                this.piecesPlaced = 0;
+                this.nextGravitySwitch = this.calculateNextGravitySwitch();
             }
             
             if (!this.gameOver) {
@@ -209,6 +210,7 @@ export class RotrixGame {
     reset() {
         this.board.reset();
         this.piecesPlaced = 0;
+        this.nextGravitySwitch = this.calculateNextGravitySwitch();
         this.isInvertedMode = false;
         this.gravity = 1;
         this.gameOver = false;
@@ -251,6 +253,12 @@ export class RotrixGame {
         this.score += points;
         this.scoreDisplay.textContent = this.score;
         this.checkLevelUp();
+    }
+
+    calculateNextGravitySwitch() {
+        const min = GAME_CONFIG.GRAVITY_SWITCH.MIN_PIECES;
+        const max = GAME_CONFIG.GRAVITY_SWITCH.MAX_PIECES;
+        return Math.floor(Math.random() * (max - min + 1)) + min;
     }
 }
 

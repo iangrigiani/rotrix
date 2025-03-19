@@ -10,8 +10,8 @@ export const GAME_CONFIG = {
     MAX_LEVEL: 15,           // Nivel máximo alcanzable
 
     // Configuración de velocidad
-    INITIAL_SPEED: 450,       // Velocidad inicial (ms)
-    SPEED_MULTIPLIER: 0.85,   // Reducción de tiempo por nivel (más rápido)
+    INITIAL_SPEED: 500,       // Velocidad inicial (ms)
+    SPEED_MULTIPLIER: 0.90,   // Reducción de tiempo por nivel (más rápido)
     SPEED_MIN: 50,           // Velocidad máxima (tiempo mínimo entre caídas)
 
     // Sistema de puntuación
@@ -24,5 +24,8 @@ export const GAME_CONFIG = {
     },
 
     // Mecánica de juego
-    GRAVITY_SWITCH_INTERVAL: 5  // Cambio de gravedad cada X piezas
+    GRAVITY_SWITCH: {
+        MIN_PIECES: 8,    // Mínimo de piezas antes del cambio
+        MAX_PIECES: 18     // Máximo de piezas antes del cambio
+    }
 }; 
