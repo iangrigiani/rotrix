@@ -20,28 +20,39 @@
             align-items: center;
             gap: 20px;
         }
-        .controls {
-            color: white;
-        }
-        .score {
-            color: white;
-            font-size: 24px;
-            margin-bottom: 20px;
+        .game-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
         }
         .game-info {
             color: white;
             font-size: 24px;
-            margin-bottom: 20px;
             display: flex;
             gap: 40px;
+        }
+        .next-piece {
+            background-color: #000;
+            border: 2px solid #333;
+            padding: 10px;
+            width: 120px;
+            height: 120px;
+        }
+        .controls {
+            color: white;
         }
     </style>
 </head>
 <body>
     <div class="game-container">
-        <div class="game-info">
-            <div class="score">Score: <span id="scoreDisplay">0</span></div>
-            <div class="level">Level: <span id="levelDisplay">1</span></div>
+        <div class="game-header">
+            <div class="game-info">
+                <div class="score">Score: <span id="scoreDisplay">0</span></div>
+                <div class="level">Level: <span id="levelDisplay">1</span></div>
+            </div>
+            <canvas id="nextPieceCanvas" class="next-piece"></canvas>
         </div>
         <canvas id="gameCanvas"></canvas>
         <div class="controls">

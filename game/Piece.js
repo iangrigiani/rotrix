@@ -22,12 +22,21 @@ export class Piece {
 
     constructor() {
         this.current = null;
+        this.next = null;
         this.position = { x: 0, y: 0 };
     }
 
-    spawn(width) {
+    generateNewPiece() {
         const pieceIndex = Math.floor(Math.random() * Piece.SHAPES.length);
-        this.current = Piece.SHAPES[pieceIndex];
+        return Piece.SHAPES[pieceIndex];
+    }
+
+    spawn(width) {
+        if (this.next === null) {
+            this.next = this.generateNewPiece();
+        }
+        this.current = this.next;
+        this.next = this.generateNewPiece();
         this.position.x = Math.floor(width / 2) - Math.floor(this.current[0].length / 2);
     }
 

@@ -3,6 +3,7 @@ export class Board {
         this.width = width;
         this.height = height;
         this.grid = this.createEmptyGrid();
+        this.lastClearedLines = [];
     }
 
     createEmptyGrid() {
@@ -53,11 +54,13 @@ export class Board {
     }
 
     checkLines(isInverted) {
+        this.lastClearedLines = [];
         let linesCleared = 0;
         
         if (!isInverted) {
             for (let y = this.height - 1; y >= 0; y--) {
                 if (this.grid[y].every(cell => cell !== 0)) {
+                    this.lastClearedLines.push(y);
                     this.grid.splice(y, 1);
                     this.grid.unshift(Array(this.width).fill(0));
                     linesCleared++;
@@ -76,5 +79,9 @@ export class Board {
         }
         
         return linesCleared;
+    }
+
+    getLastClearedLines() {
+        return this.lastClearedLines;
     }
 } 

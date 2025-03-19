@@ -11,12 +11,15 @@ export class RotrixGame {
         blockSize = GAME_CONFIG.DEFAULT_BLOCK_SIZE
     ) {
         this.canvas = document.getElementById('gameCanvas');
+        this.nextPieceCanvas = document.getElementById('nextPieceCanvas');
         this.canvas.width = width * blockSize;
         this.canvas.height = height * blockSize;
+        this.nextPieceCanvas.width = 120;
+        this.nextPieceCanvas.height = 120;
 
         this.board = new Board(width, height);
         this.piece = new Piece();
-        this.renderer = new Renderer(this.canvas, blockSize);
+        this.renderer = new Renderer(this.canvas, this.nextPieceCanvas, blockSize);
         this.controls = new Controls(this);
 
         this.piecesPlaced = 0;
@@ -77,7 +80,7 @@ export class RotrixGame {
         return true;
     }
 
-    movePiece(dx, dy) {
+    async movePiece(dx, dy) {
         if (this.gameOver) return;
 
         const newPos = {
@@ -92,6 +95,12 @@ export class RotrixGame {
             const linesCleared = this.board.checkLines(this.isInvertedMode);
             
             if (linesCleared > 0) {
+                // Animar líneas antes de eliminarlas
+                await this.renderer.animateLinesClear(
+                    this.board.getLastClearedLines(), 
+                    Piece.COLORS,
+                    this.board
+                );
                 this.updateScore(GAME_CONFIG.LINE_POINTS[linesCleared] || 
                     GAME_CONFIG.LINE_POINTS[1] * linesCleared);
             }
@@ -99,7 +108,7 @@ export class RotrixGame {
             this.piecesPlaced++;
             
             if (this.piecesPlaced >= this.nextGravitySwitch) {
-                this.switchGravity();
+                await this.switchGravity();
                 this.piecesPlaced = 0;
                 this.nextGravitySwitch = this.calculateNextGravitySwitch();
             }
@@ -120,9 +129,12 @@ export class RotrixGame {
         }
     }
 
-    switchGravity() {
+    async switchGravity() {
         this.isInvertedMode = !this.isInvertedMode;
         this.gravity = this.isInvertedMode ? -1 : 1;
+        
+        // Animar el cambio de gravedad
+        await this.renderer.animateGravitySwitch(this.board, this.isInvertedMode, Piece.COLORS);
         
         if (this.isInvertedMode) {
             // Encontrar la pieza más alta
@@ -227,6 +239,7 @@ export class RotrixGame {
     draw() {
         this.renderer.clear();
         this.renderer.drawBoard(this.board, Piece.COLORS);
+        this.renderer.drawNextPiece(this.piece, Piece.COLORS);
         if (!this.gameOver && this.piece.current) {
             this.renderer.drawPiece(this.piece, Piece.COLORS);
         }
