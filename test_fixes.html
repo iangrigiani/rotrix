@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🐛 Test de Correcciones - Rotrix</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        
+        .test-container {
+            display: flex;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .game-section {
+            flex: 1;
+        }
+        
+        .test-section {
+            flex: 1;
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        
+        .test-results {
+            background: #333;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .pass { color: #4ade80; }
+        .fail { color: #ef4444; }
+        .warning { color: #fbbf24; }
+        
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background: #2563eb;
+        }
+        
+        .auto-test {
+            background: #10b981;
+        }
+        
+        .auto-test:hover {
+            background: #059669;
+        }
+        
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .score, .level {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .next-piece {
+            width: 120px;
+            height: 120px;
+            border: 2px solid #444;
+            background: #000;
+        }
+        
+        canvas {
+            border: 2px solid #444;
+            background: #000;
+        }
+        
+        .controls {
+            color: white;
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .controls p {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="game-section">
+            <div class="game-info">
+                <div class="score">Score: <span id="scoreDisplay">0</span></div>
+                <div class="level">Level: <span id="levelDisplay">1</span></div>
+                <canvas id="nextPieceCanvas" class="next-piece"></canvas>
+            </div>
+            <canvas id="gameCanvas"></canvas>
+            <div class="controls">
+                <p><strong>🎮 Controles:</strong></p>
+                <p>← → : Mover pieza</p>
+                <p>↑ : Rotar pieza</p>
+                <p>↓ : Caída rápida</p>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🔧 Test de Correcciones</h2>
+            
+            <div>
+                <button onclick="runBasicTests()">🧪 Tests Básicos</button>
+                <button onclick="runSpawnTests()">Test Spawn System</button>
+                <button onclick="runGravityTests()">Test Gravity System</button>
+                <button onclick="runAutoTest()">Test Automático (30s)</button>
+                <button onclick="testLineDetection()">🔍 Test Bug Líneas</button>
+                <button onclick="testRealFullLine()">✅ Test Línea Completa</button>
+                <button onclick="testInvertedGravityBug()">🔄 Test Gravedad Invertida</button>
+                <button onclick="testRecursiveLineDetection()">Test Líneas Recursivas</button>
+                <button onclick="testInvertedRecursiveLines()">Test Líneas Recursivas Invertidas</button>
+                <button onclick="testGravityDoesNotCreateLines()">🔍 Test Gravedad Correcta</button>
+                <button onclick="clearResults()">Limpiar Resultados</button>
+            </div>
+            
+            <div class="test-results" id="testResults">
+                <div class="pass">✅ Sistema de testing inicializado</div>
+                <div class="warning">⚠️ Esperando tests...</div>
+            </div>
+            
+            <h3>📊 Estadísticas en Tiempo Real</h3>
+            <div id="liveStats" class="test-results">
+                <div>Piezas spawneadas: <span id="spawnCount">0</span></div>
+                <div>Piezas aterrizadas: <span id="landedCount">0</span></div>
+                <div>Cambios de gravedad: <span id="gravityCount">0</span></div>
+                <div>Spawns prevenidos: <span id="preventedCount">0</span></div>
+            </div>
+            
+            <h3>🚨 Detección de Bugs</h3>
+            <div id="bugDetection" class="test-results">
+                <div class="pass">🔍 Monitoreando...</div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { RotrixGame } from './rotrix.js';
+        
+        // Variables globales para testing
+        let game;
+        let testResults = [];
+        let stats = {
+            spawns: 0,
+            landed: 0,
+            gravityChanges: 0,
+            prevented: 0,
+            doubleSpawns: 0,
+            cascadeGravity: 0
+        };
+        
+        // Inicializar el juego
+        window.onload = () => {
+            game = new RotrixGame();
+            window.testGame = game;
+            
+            // Interceptar logs para testing
+            const originalLog = game.logger.log.bind(game.logger);
+            game.logger.log = function(eventType, data) {
+                originalLog(eventType, data);
+                analyzeEvent(eventType, data);
+                updateLiveStats();
+            };
+            
+            addTestResult('✅ Juego inicializado con sistema de testing', 'pass');
+        };
+        
+        // Analizar eventos para detectar bugs
+        function analyzeEvent(eventType, data) {
+            switch(eventType) {
+                case 'PIECE_SPAWN':
+                    stats.spawns++;
+                    checkDoubleSpawn(data);
+                    break;
+                    
+                case 'PIECE_LANDED':
+                    stats.landed++;
+                    break;
+                    
+                case 'GRAVITY_SWITCH':
+                    stats.gravityChanges++;
+                    checkGravityCascade(data);
+                    break;
+                    
+                case 'SPAWN_PREVENTED':
+                    stats.prevented++;
+                    addTestResult(`✅ Spawn doble prevenido correctamente: ${data.reason}`, 'pass');
+                    break;
+                    
+                case 'GRAVITY_SWITCH_PREVENTED':
+                    addTestResult(`✅ Cambio de gravedad en cascada prevenido: ${data.reason}`, 'pass');
+                    break;
+            }
+        }
+        
+        let lastSpawnTime = 0;
+        function checkDoubleSpawn(data) {
+            const now = performance.now();
+            if (now - lastSpawnTime < 100) { // Menos de 100ms entre spawns
+                stats.doubleSpawns++;
+                addTestResult(`🚨 POSIBLE SPAWN DOBLE DETECTADO: Pieza #${data.pieceNumber}`, 'fail');
+            }
+            lastSpawnTime = now;
+        }
+        
+        let lastGravityTime = 0;
+        function checkGravityCascade(data) {
+            const now = performance.now();
+            if (data.piecesPlaced === 0 && now - lastGravityTime < 1000) {
+                stats.cascadeGravity++;
+                addTestResult(`🚨 CAMBIO DE GRAVEDAD EN CASCADA: piecesPlaced=${data.piecesPlaced}`, 'fail');
+            }
+            lastGravityTime = now;
+        }
+        
+        // Funciones de testing
+        window.runBasicTests = function() {
+            addTestResult('🧪 Ejecutando tests básicos...', 'warning');
+            
+            // Test 1: Verificar que el juego está corriendo
+            if (game && !game.gameOver) {
+                addTestResult('✅ Test 1: Juego activo', 'pass');
+            } else {
+                addTestResult('❌ Test 1: Juego no está activo', 'fail');
+            }
+            
+            // Test 2: Verificar inicialización correcta
+            if (game.piecesPlaced === 0 && game.nextGravitySwitch > 0) {
+                addTestResult('✅ Test 2: Contador de piezas inicializado correctamente', 'pass');
+            } else {
+                addTestResult('❌ Test 2: Contador de piezas mal inicializado', 'fail');
+            }
+            
+            // Test 3: Verificar bandera de protección
+            if (game.switchingGravity === false) {
+                addTestResult('✅ Test 3: Bandera de protección inicializada', 'pass');
+            } else {
+                addTestResult('❌ Test 3: Bandera de protección mal inicializada', 'fail');
+            }
+            
+            // Test 4: Verificar logger
+            if (game.logger && typeof game.logger.log === 'function') {
+                addTestResult('✅ Test 4: Sistema de logging funcional', 'pass');
+            } else {
+                addTestResult('❌ Test 4: Sistema de logging defectuoso', 'fail');
+            }
+        };
+        
+        window.runSpawnTests = function() {
+            addTestResult('👥 Testing sistema de spawn...', 'warning');
+            
+            // Intentar spawn múltiple (debería fallar)
+            const result1 = game.spawnPiece();
+            const result2 = game.spawnPiece();
+            
+            if (result1 && !result2) {
+                addTestResult('✅ Spawn doble correctamente prevenido', 'pass');
+            } else {
+                addTestResult('❌ Sistema de prevención de spawn doble falló', 'fail');
+            }
+        };
+        
+        window.runGravityTests = function() {
+            addTestResult('🔄 Testing sistema de gravedad...', 'warning');
+            
+            // Verificar estado antes del test
+            const initialSwitching = game.switchingGravity;
+            if (!initialSwitching) {
+                addTestResult('✅ Estado inicial de gravedad correcto', 'pass');
+                
+                // Simular condición de cambio de gravedad
+                const oldPieces = game.piecesPlaced;
+                game.piecesPlaced = game.nextGravitySwitch;
+                
+                addTestResult(`ℹ️ Simulando cambio de gravedad (${oldPieces} → ${game.piecesPlaced})`, 'warning');
+            } else {
+                addTestResult('❌ Sistema de gravedad en estado inconsistente', 'fail');
+            }
+        };
+        
+        window.runAutoTest = function() {
+            addTestResult('🤖 Iniciando test automático...', 'warning');
+            
+            // Simular juego automático durante 30 segundos
+            let testDuration = 30000;
+            let interval = setInterval(() => {
+                // Simular caída rápida
+                game.movePiece(0, game.gravity);
+                
+                testDuration -= 100;
+                if (testDuration <= 0) {
+                    clearInterval(interval);
+                    finishAutoTest();
+                }
+            }, 100);
+        };
+        
+        function finishAutoTest() {
+            addTestResult('🤖 Test automático completado', 'pass');
+            addTestResult(`📊 Estadísticas finales:`, 'warning');
+            addTestResult(`   - Spawns: ${stats.spawns}`, 'warning');
+            addTestResult(`   - Aterrizajes: ${stats.landed}`, 'warning');
+            addTestResult(`   - Cambios de gravedad: ${stats.gravityChanges}`, 'warning');
+            addTestResult(`   - Spawns prevenidos: ${stats.prevented}`, 'warning');
+            
+            // Calcular ratio de éxito
+            const spawnRatio = stats.landed / stats.spawns;
+            if (spawnRatio > 0.8) {
+                addTestResult(`✅ Ratio spawn/aterrizaje: ${(spawnRatio * 100).toFixed(1)}% (BUENO)`, 'pass');
+            } else {
+                addTestResult(`❌ Ratio spawn/aterrizaje: ${(spawnRatio * 100).toFixed(1)}% (MALO)`, 'fail');
+            }
+            
+            if (stats.doubleSpawns === 0) {
+                addTestResult('✅ Sin spawns dobles detectados', 'pass');
+            } else {
+                addTestResult(`❌ ${stats.doubleSpawns} spawns dobles detectados`, 'fail');
+            }
+            
+            if (stats.cascadeGravity === 0) {
+                addTestResult('✅ Sin cambios de gravedad en cascada', 'pass');
+            } else {
+                addTestResult(`❌ ${stats.cascadeGravity} cambios de gravedad en cascada`, 'fail');
+            }
+        }
+        
+        function addTestResult(message, type = 'info') {
+            const results = document.getElementById('testResults');
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            results.appendChild(div);
+            results.scrollTop = results.scrollHeight;
+        }
+        
+        function updateLiveStats() {
+            document.getElementById('spawnCount').textContent = stats.spawns;
+            document.getElementById('landedCount').textContent = stats.landed;
+            document.getElementById('gravityCount').textContent = stats.gravityChanges;
+            document.getElementById('preventedCount').textContent = stats.prevented;
+            
+            // Actualizar detección de bugs
+            const bugDiv = document.getElementById('bugDetection');
+            bugDiv.innerHTML = '';
+            
+            if (stats.doubleSpawns > 0) {
+                const div = document.createElement('div');
+                div.className = 'fail';
+                div.textContent = `🚨 ${stats.doubleSpawns} spawns dobles detectados`;
+                bugDiv.appendChild(div);
+            }
+            
+            if (stats.cascadeGravity > 0) {
+                const div = document.createElement('div');
+                div.className = 'fail';
+                div.textContent = `🚨 ${stats.cascadeGravity} cambios de gravedad en cascada`;
+                bugDiv.appendChild(div);
+            }
+            
+            if (stats.doubleSpawns === 0 && stats.cascadeGravity === 0) {
+                const div = document.createElement('div');
+                div.className = 'pass';
+                div.textContent = '✅ Sin bugs detectados';
+                bugDiv.appendChild(div);
+            }
+        }
+    </script>
+</body>
+</html> 

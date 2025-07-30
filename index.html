@@ -1,51 +1,204 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-    <title>Rotrix</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rotrix - Tetris con Gravedad Invertida</title>
     <style>
         body {
+            margin: 0;
+            padding: 0;
+            background: #1a1a1a;
+            color: white;
+            font-family: Arial, sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #1a1a1a;
+            min-height: 100vh;
+            /* Prevent layout shifts during animations */
+            contain: layout;
         }
-        canvas {
-            border: 2px solid #333;
-        }
+
         .game-container {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 20px;
+            /* Hardware acceleration for smoother animations */
+            transform: translateZ(0);
         }
+
         .game-header {
             display: flex;
-            flex-direction: column;
+            justify-content: space-between;
             align-items: center;
-            gap: 10px;
             width: 100%;
+            max-width: 500px;
+            margin-bottom: 20px;
+            /* Prevent repaints during score updates */
+            will-change: contents;
         }
+
         .game-info {
-            color: white;
-            font-size: 24px;
             display: flex;
-            gap: 40px;
+            gap: 30px;
+            font-size: 20px;
+            font-weight: bold;
+            /* Optimize text rendering */
+            text-rendering: optimizeSpeed;
         }
+
+        .score, .level {
+            color: #FFD700;
+            /* Reduce repaints for frequently changing text */
+            contain: layout style;
+        }
+
         .next-piece {
-            background-color: #000;
-            border: 2px solid #333;
-            padding: 10px;
             width: 120px;
             height: 120px;
+            border: 2px solid #444;
+            background: #000;
+            /* GPU acceleration */
+            transform: translateZ(0);
         }
+
+        canvas {
+            border: 2px solid #444;
+            background: #000;
+            display: block;
+            /* Optimize canvas rendering */
+            image-rendering: pixelated;
+            /* Prevent canvas clearing flicker */
+            will-change: transform;
+        }
+
         .controls {
             color: white;
+            text-align: center;
+            /* Prevent layout shifts */
+            contain: layout;
+        }
+
+        .controls p {
+            margin: 5px 0;
+        }
+
+        /* 🔧 Estilos para debugging */
+        .debug-panel {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #444;
+            font-family: monospace;
+            font-size: 12px;
+            max-width: 300px;
+            z-index: 1000;
+            display: none;
+        }
+
+        .debug-panel.active {
+            display: block;
+        }
+
+        .debug-button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin: 2px;
+            font-size: 11px;
+        }
+
+        .debug-button:hover {
+            background: #2563eb;
+        }
+
+        .debug-stats {
+            margin: 10px 0;
+            font-size: 11px;
+        }
+
+        .toggle-debug {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            z-index: 1001;
+        }
+
+        /* Responsive design improvements */
+        @media (max-width: 768px) {
+            .game-info {
+                font-size: 18px;
+                gap: 20px;
+            }
+            
+            .controls {
+                font-size: 14px;
+            }
+
+            .debug-panel {
+                position: relative;
+                top: auto;
+                right: auto;
+                margin-top: 20px;
+                max-width: none;
+            }
+
+            .toggle-debug {
+                position: relative;
+                top: auto;
+                right: auto;
+                margin-top: 10px;
+            }
+        }
+
+        /* Reduce repaints for frequently changing elements */
+        #scoreDisplay, #levelDisplay {
+            will-change: contents;
         }
     </style>
 </head>
 <body>
+    <!-- 🔧 Botón para mostrar/ocultar panel de debugging -->
+    <button class="toggle-debug" onclick="toggleDebugPanel()">🐛 Debug</button>
+
+    <!-- 🔧 Panel de debugging -->
+    <div id="debugPanel" class="debug-panel">
+        <h4>🔧 Panel de Debugging</h4>
+        <div class="debug-stats" id="debugStats">
+            <div>Spawns: <span id="spawnCount">0</span></div>
+            <div>Landed: <span id="landedCount">0</span></div>
+            <div>Gravity: <span id="gravityCount">0</span></div>
+            <div>Prevented: <span id="preventedCount">0</span></div>
+        </div>
+        <div>
+            <button class="debug-button" onclick="runQuickTest()">🧪 Test Rápido</button>
+            <button class="debug-button" onclick="tester.showStats()">📊 Stats</button>
+            <button class="debug-button" onclick="debugRotrix.exportLogs()">💾 Export</button>
+        </div>
+        <div>
+            <button class="debug-button" onclick="tester.simulatePlay(10)">🤖 Simular 10s</button>
+            <button class="debug-button" onclick="debugRotrix.showBoard()">🎮 Tablero</button>
+            <button class="debug-button" onclick="tester.reset()">🔄 Reset</button>
+        </div>
+        <div style="margin-top: 10px; font-size: 10px; color: #888;">
+            <div>F12 → Console para más comandos</div>
+            <div>Comandos: debugRotrix.*, tester.*</div>
+        </div>
+    </div>
+
     <div class="game-container">
         <div class="game-header">
             <div class="game-info">
@@ -62,6 +215,80 @@
             <p>↓ : Caída rápida</p>
         </div>
     </div>
+
+    <!-- Scripts principales -->
     <script type="module" src="rotrix.js"></script>
+    <script type="module" src="test_fixes.js"></script>
+
+    <!-- 🔧 Scripts de debugging -->
+    <script>
+        let debugPanelVisible = false;
+        let statsUpdateInterval;
+
+        function toggleDebugPanel() {
+            debugPanelVisible = !debugPanelVisible;
+            const panel = document.getElementById('debugPanel');
+            
+            if (debugPanelVisible) {
+                panel.classList.add('active');
+                startStatsUpdate();
+                console.log('🔧 Panel de debugging activado');
+                console.log('Usa "tester.*" y "debugRotrix.*" para comandos adicionales');
+            } else {
+                panel.classList.remove('active');
+                stopStatsUpdate();
+            }
+        }
+
+        function startStatsUpdate() {
+            if (statsUpdateInterval) return;
+            
+            statsUpdateInterval = setInterval(() => {
+                if (window.tester && window.tester.stats) {
+                    document.getElementById('spawnCount').textContent = window.tester.stats.spawns;
+                    document.getElementById('landedCount').textContent = window.tester.stats.landed;
+                    document.getElementById('gravityCount').textContent = window.tester.stats.gravityChanges;
+                    document.getElementById('preventedCount').textContent = window.tester.stats.prevented;
+                }
+            }, 1000);
+        }
+
+        function stopStatsUpdate() {
+            if (statsUpdateInterval) {
+                clearInterval(statsUpdateInterval);
+                statsUpdateInterval = null;
+            }
+        }
+
+        function runQuickTest() {
+            if (window.tester) {
+                console.log('🧪 Ejecutando test rápido...');
+                const results = window.tester.runTests();
+                
+                if (results.failed === 0) {
+                    alert('✅ Todos los tests pasaron!');
+                } else {
+                    alert(`⚠️ ${results.failed} tests fallaron. Revisa la consola.`);
+                }
+            } else {
+                alert('❌ Sistema de testing no disponible');
+            }
+        }
+
+        // Atajos de teclado para debugging
+        document.addEventListener('keydown', (e) => {
+            // Ctrl + D = Toggle debug panel
+            if (e.ctrlKey && e.key === 'd') {
+                e.preventDefault();
+                toggleDebugPanel();
+            }
+            
+            // Ctrl + T = Quick test
+            if (e.ctrlKey && e.key === 't') {
+                e.preventDefault();
+                runQuickTest();
+            }
+        });
+    </script>
 </body>
 </html> 

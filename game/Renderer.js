@@ -10,188 +10,317 @@ export class Renderer {
         
         // Tamaño más pequeño para la próxima pieza
         this.nextBlockSize = 25;
+        
+        // Cache DOM elements to avoid repeated getElementById calls
+        this.scoreDisplay = document.getElementById('scoreDisplay');
+        this.levelDisplay = document.getElementById('levelDisplay');
+        
+        // Performance optimization: cache frequently used values
+        this.canvasWidth = this.canvas.width;
+        this.canvasHeight = this.canvas.height;
+        this.centerX = this.canvasWidth / 2;
+        this.centerY = this.canvasHeight / 2;
+        
+        // Optimization: pre-calculate block sizes
+        this.blockSizeMinus1 = this.blockSize - 1;
+        this.nextBlockSizeMinus1 = this.nextBlockSize - 1;
     }
 
     clear() {
         this.ctx.fillStyle = '#000';
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
     }
 
+    // Optimized drawing with batched operations
     drawBoard(board, colors) {
+        // Batch similar operations to reduce state changes
+        const blocks = [];
+        
+        // Collect all blocks to draw
         for (let y = 0; y < board.height; y++) {
             for (let x = 0; x < board.width; x++) {
-                if (board.grid[y][x]) {
-                    this.ctx.fillStyle = colors[board.grid[y][x]];
-                    this.ctx.fillRect(
-                        x * this.blockSize, 
-                        y * this.blockSize,
-                        this.blockSize - 1, 
-                        this.blockSize - 1
-                    );
+                const cellValue = board.grid[y][x];
+                if (cellValue) {
+                    blocks.push({
+                        x: x * this.blockSize,
+                        y: y * this.blockSize,
+                        color: colors[cellValue]
+                    });
                 }
             }
         }
+        
+        // Draw blocks grouped by color to minimize context switches
+        const colorGroups = {};
+        blocks.forEach(block => {
+            if (!colorGroups[block.color]) {
+                colorGroups[block.color] = [];
+            }
+            colorGroups[block.color].push(block);
+        });
+        
+        // Render each color group
+        Object.entries(colorGroups).forEach(([color, colorBlocks]) => {
+            this.ctx.fillStyle = color;
+            colorBlocks.forEach(block => {
+                this.ctx.fillRect(block.x, block.y, this.blockSizeMinus1, this.blockSizeMinus1);
+            });
+        });
     }
 
+    // Optimized piece drawing
     drawPiece(piece, colors) {
-        for (let y = 0; y < piece.current.length; y++) {
-            for (let x = 0; x < piece.current[y].length; x++) {
-                if (piece.current[y][x]) {
-                    this.ctx.fillStyle = colors[piece.current[y][x]];
-                    this.ctx.fillRect(
-                        (piece.position.x + x) * this.blockSize,
-                        (piece.position.y + y) * this.blockSize,
-                        this.blockSize - 1,
-                        this.blockSize - 1
-                    );
+        const blocks = [];
+        const pieceHeight = piece.current.length;
+        
+        // Collect all blocks to draw
+        for (let y = 0; y < pieceHeight; y++) {
+            const row = piece.current[y];
+            const rowLength = row.length;
+            
+            for (let x = 0; x < rowLength; x++) {
+                const cellValue = row[x];
+                if (cellValue) {
+                    blocks.push({
+                        x: (piece.position.x + x) * this.blockSize,
+                        y: (piece.position.y + y) * this.blockSize,
+                        color: colors[cellValue]
+                    });
                 }
             }
         }
+        
+        // Batch draw by color
+        const colorGroups = {};
+        blocks.forEach(block => {
+            if (!colorGroups[block.color]) {
+                colorGroups[block.color] = [];
+            }
+            colorGroups[block.color].push(block);
+        });
+        
+        Object.entries(colorGroups).forEach(([color, colorBlocks]) => {
+            this.ctx.fillStyle = color;
+            colorBlocks.forEach(block => {
+                this.ctx.fillRect(block.x, block.y, this.blockSizeMinus1, this.blockSizeMinus1);
+            });
+        });
     }
 
     showLevelUp(level, drawCallback) {
-        // Guardar el estado actual
-        const originalAlpha = this.ctx.globalAlpha;
-        const originalFont = this.ctx.font;
-        const originalAlign = this.ctx.textAlign;
+        // Optimize by saving only necessary context state
+        const originalComposite = this.ctx.globalCompositeOperation;
         
-        // Configurar el efecto
-        this.ctx.globalAlpha = 1;
+        // Use more efficient overlay method
+        this.ctx.globalCompositeOperation = 'source-over';
         this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
         
-        // Dibujar el texto
-        this.ctx.fillStyle = '#FFD700'; // Color dorado
+        // Draw text with cached center coordinates
+        this.ctx.fillStyle = '#FFD700';
         this.ctx.font = '36px Arial';
         this.ctx.textAlign = 'center';
-        this.ctx.fillText(`¡NIVEL ${level}!`, this.canvas.width / 2, this.canvas.height / 2);
+        this.ctx.fillText(`¡NIVEL ${level}!`, this.centerX, this.centerY);
         
-        // Restaurar el estado
-        this.ctx.globalAlpha = originalAlpha;
-        this.ctx.font = originalFont;
-        this.ctx.textAlign = originalAlign;
+        // Restore only what was changed
+        this.ctx.globalCompositeOperation = originalComposite;
+        this.ctx.textAlign = 'start'; // Reset to default
         
-        // Desvanecer el efecto usando el callback
-        setTimeout(() => drawCallback(), 1000);
+        // Use requestAnimationFrame instead of setTimeout for better performance
+        requestAnimationFrame(() => {
+            setTimeout(() => drawCallback(), 1000);
+        });
     }
 
     drawGameOver() {
+        // Optimize overlay drawing
         this.ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
         
+        // Batch text drawing operations
         this.ctx.fillStyle = 'white';
-        this.ctx.font = '30px Arial';
         this.ctx.textAlign = 'center';
-        this.ctx.fillText('¡GAME OVER!', this.canvas.width / 2, this.canvas.height / 2 - 40);
+        
+        // Draw all text at once to minimize context switches
+        this.ctx.font = '30px Arial';
+        this.ctx.fillText('¡GAME OVER!', this.centerX, this.centerY - 40);
+        
         this.ctx.font = '24px Arial';
-        this.ctx.fillText(`Nivel alcanzado: ${document.getElementById('levelDisplay').textContent}`,
-            this.canvas.width / 2, this.canvas.height / 2);
-        this.ctx.fillText(`Puntaje Final: ${document.getElementById('scoreDisplay').textContent}`, 
-            this.canvas.width / 2, this.canvas.height / 2 + 40);
+        this.ctx.fillText(`Nivel alcanzado: ${this.levelDisplay.textContent}`, this.centerX, this.centerY);
+        this.ctx.fillText(`Puntaje Final: ${this.scoreDisplay.textContent}`, this.centerX, this.centerY + 40);
+        
         this.ctx.font = '20px Arial';
-        this.ctx.fillText('Presiona ENTER para reiniciar', this.canvas.width / 2, this.canvas.height / 2 + 60);
+        this.ctx.fillText('Presiona ENTER para reiniciar', this.centerX, this.centerY + 60);
+        
+        // Reset text alignment
+        this.ctx.textAlign = 'start';
     }
 
     drawNextPiece(piece, colors) {
-        // Limpiar el canvas de la próxima pieza
+        // Early return if no next piece
+        if (!piece.next) {
+            this.nextCtx.fillStyle = '#000';
+            this.nextCtx.fillRect(0, 0, this.nextCanvas.width, this.nextCanvas.height);
+            return;
+        }
+
+        // Clear canvas
         this.nextCtx.fillStyle = '#000';
         this.nextCtx.fillRect(0, 0, this.nextCanvas.width, this.nextCanvas.height);
 
-        if (!piece.next) return;
+        // Cache calculations
+        const pieceWidth = piece.next[0].length;
+        const pieceHeight = piece.next.length;
+        const centerX = (this.nextCanvas.width - pieceWidth * this.nextBlockSize) / 2;
+        const centerY = (this.nextCanvas.height - pieceHeight * this.nextBlockSize) / 2;
 
-        // Calcular el centro del canvas
-        const centerX = (this.nextCanvas.width - piece.next[0].length * this.nextBlockSize) / 2;
-        const centerY = (this.nextCanvas.height - piece.next.length * this.nextBlockSize) / 2;
-
-        // Dibujar la próxima pieza
-        for (let y = 0; y < piece.next.length; y++) {
-            for (let x = 0; x < piece.next[y].length; x++) {
-                if (piece.next[y][x]) {
-                    this.nextCtx.fillStyle = colors[piece.next[y][x]];
-                    this.nextCtx.fillRect(
-                        centerX + x * this.nextBlockSize,
-                        centerY + y * this.nextBlockSize,
-                        this.nextBlockSize - 1,
-                        this.nextBlockSize - 1
-                    );
+        // Batch drawing by color
+        const blocks = [];
+        for (let y = 0; y < pieceHeight; y++) {
+            const row = piece.next[y];
+            for (let x = 0; x < pieceWidth; x++) {
+                const cellValue = row[x];
+                if (cellValue) {
+                    blocks.push({
+                        x: centerX + x * this.nextBlockSize,
+                        y: centerY + y * this.nextBlockSize,
+                        color: colors[cellValue]
+                    });
                 }
             }
         }
+
+        // Group by color and draw
+        const colorGroups = {};
+        blocks.forEach(block => {
+            if (!colorGroups[block.color]) {
+                colorGroups[block.color] = [];
+            }
+            colorGroups[block.color].push(block);
+        });
+
+        Object.entries(colorGroups).forEach(([color, colorBlocks]) => {
+            this.nextCtx.fillStyle = color;
+            colorBlocks.forEach(block => {
+                this.nextCtx.fillRect(block.x, block.y, this.nextBlockSizeMinus1, this.nextBlockSizeMinus1);
+            });
+        });
     }
 
+    // Optimized animation with fast cloning
     async animateLinesClear(lines, colors, board) {
         const duration = GAME_CONFIG.ANIMATIONS.LINE_CLEAR.BASE_DURATION * 
             Math.pow(GAME_CONFIG.ANIMATIONS.LINE_CLEAR.MULTIPLIER, lines.length - 1);
         
-        // Guardar estado original
-        const originalBoard = JSON.parse(JSON.stringify(board.grid));
+        // Use fast cloning instead of JSON methods
+        const originalBoard = board.fastClone();
         
-        // Animar el destello de las líneas
+        // Pre-calculate positions for better performance
+        const lineBlocks = [];
+        lines.forEach(y => {
+            for (let x = 0; x < board.width; x++) {
+                lineBlocks.push({
+                    x: x * this.blockSize,
+                    y: y * this.blockSize,
+                    originalColor: originalBoard[y][x] ? colors[originalBoard[y][x]] : null
+                });
+            }
+        });
+        
+        // Optimized animation loop
+        const flashColor = GAME_CONFIG.ANIMATIONS.LINE_CLEAR.FLASH_COLOR;
+        const flashDuration = duration / 6;
+        
         for (let flash = 0; flash < 3; flash++) {
-            // Pintar líneas en blanco
-            for (const y of lines) {
-                for (let x = 0; x < board.width; x++) {
-                    this.ctx.fillStyle = GAME_CONFIG.ANIMATIONS.LINE_CLEAR.FLASH_COLOR;
-                    this.ctx.fillRect(
-                        x * this.blockSize,
-                        y * this.blockSize,
-                        this.blockSize - 1,
-                        this.blockSize - 1
-                    );
-                }
-            }
-            await new Promise(resolve => setTimeout(resolve, duration / 6));
+            // Flash white
+            this.ctx.fillStyle = flashColor;
+            lineBlocks.forEach(block => {
+                this.ctx.fillRect(block.x, block.y, this.blockSizeMinus1, this.blockSizeMinus1);
+            });
+            await new Promise(resolve => setTimeout(resolve, flashDuration));
             
-            // Restaurar color original
-            for (const y of lines) {
-                for (let x = 0; x < board.width; x++) {
-                    if (originalBoard[y][x]) {
-                        this.ctx.fillStyle = colors[originalBoard[y][x]];
-                        this.ctx.fillRect(
-                            x * this.blockSize,
-                            y * this.blockSize,
-                            this.blockSize - 1,
-                            this.blockSize - 1
-                        );
-                    }
+            // Restore original colors
+            lineBlocks.forEach(block => {
+                if (block.originalColor) {
+                    this.ctx.fillStyle = block.originalColor;
+                    this.ctx.fillRect(block.x, block.y, this.blockSizeMinus1, this.blockSizeMinus1);
                 }
-            }
-            await new Promise(resolve => setTimeout(resolve, duration / 6));
+            });
+            await new Promise(resolve => setTimeout(resolve, flashDuration));
         }
     }
 
+    // Optimized gravity switch animation
     async animateGravitySwitch(board, isInvertedMode, colors) {
         const steps = GAME_CONFIG.ANIMATIONS.GRAVITY_SWITCH.STEPS;
         const stepDuration = GAME_CONFIG.ANIMATIONS.GRAVITY_SWITCH.DURATION / steps;
         
-        // Crear una copia del tablero para la animación
-        const originalBoard = JSON.parse(JSON.stringify(board.grid));
+        // Use fast cloning
+        const originalBoard = board.fastClone();
         
-        for (let step = 1; step <= steps; step++) {
-            this.clear();
-            
-            // Calcular posición actual de cada bloque
-            for (let y = 0; y < board.height; y++) {
-                for (let x = 0; x < board.width; x++) {
-                    if (originalBoard[y][x]) {
-                        const progress = step / steps;
-                        const targetY = isInvertedMode ? 0 : board.height - 1;
-                        const totalMove = targetY - y;
-                        const currentMove = totalMove * progress;
-                        
-                        const newY = Math.floor(y + currentMove);
-                        if (newY >= 0 && newY < board.height) {
-                            this.ctx.fillStyle = colors[originalBoard[y][x]];
-                            this.ctx.fillRect(
-                                x * this.blockSize,
-                                newY * this.blockSize,
-                                this.blockSize - 1,
-                                this.blockSize - 1
-                            );
+        // Pre-calculate all block movements for better performance
+        const blockMovements = [];
+        
+        for (let y = 0; y < board.height; y++) {
+            for (let x = 0; x < board.width; x++) {
+                if (originalBoard[y][x]) {
+                    let targetY;
+                    
+                    if (isInvertedMode) {
+                        // Count blocks above
+                        let blocksAbove = 0;
+                        for (let checkY = 0; checkY < y; checkY++) {
+                            if (originalBoard[checkY][x]) blocksAbove++;
                         }
+                        targetY = blocksAbove;
+                    } else {
+                        // Count blocks below
+                        let blocksBelow = 0;
+                        for (let checkY = board.height - 1; checkY > y; checkY--) {
+                            if (originalBoard[checkY][x]) blocksBelow++;
+                        }
+                        targetY = board.height - 1 - blocksBelow;
                     }
+                    
+                    blockMovements.push({
+                        x: x,
+                        startY: y,
+                        targetY: targetY,
+                        color: colors[originalBoard[y][x]]
+                    });
                 }
             }
+        }
+
+        // Animate movement
+        for (let step = 0; step <= steps; step++) {
+            this.clear();
+            
+            const progress = step / steps;
+            
+            // Batch draw by color for better performance
+            const colorGroups = {};
+            
+            blockMovements.forEach(movement => {
+                const currentY = movement.startY + (movement.targetY - movement.startY) * progress;
+                
+                if (!colorGroups[movement.color]) {
+                    colorGroups[movement.color] = [];
+                }
+                
+                colorGroups[movement.color].push({
+                    x: movement.x * this.blockSize,
+                    y: currentY * this.blockSize
+                });
+            });
+            
+            // Draw all blocks of the same color together
+            Object.entries(colorGroups).forEach(([color, blocks]) => {
+                this.ctx.fillStyle = color;
+                blocks.forEach(block => {
+                    this.ctx.fillRect(block.x, block.y, this.blockSizeMinus1, this.blockSizeMinus1);
+                });
+            });
             
             await new Promise(resolve => setTimeout(resolve, stepDuration));
         }

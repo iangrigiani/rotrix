@@ -20,10 +20,15 @@ export class Piece {
         '#3877FF'  // Z
     ];
 
+    // Pre-computed rotations for better performance (object pooling concept)
+    static _rotationCache = new Map();
+
     constructor() {
         this.current = null;
         this.next = null;
         this.position = { x: 0, y: 0 };
+        // Performance optimization: pre-allocate rotation matrix
+        this._rotationMatrix = [];
     }
 
     generateNewPiece() {
@@ -40,9 +45,48 @@ export class Piece {
         this.position.x = Math.floor(width / 2) - Math.floor(this.current[0].length / 2);
     }
 
+    // Optimized rotation with caching
     rotate() {
-        return this.current[0].map((_, i) =>
-            this.current.map(row => row[row.length - 1 - i])
+        if (!this.current) return null;
+        
+        // Create a cache key for this piece shape
+        const cacheKey = JSON.stringify(this.current);
+        
+        // Check if rotation is already cached
+        if (Piece._rotationCache.has(cacheKey)) {
+            return Piece._rotationCache.get(cacheKey);
+        }
+        
+        // Perform rotation calculation
+        const rows = this.current.length;
+        const cols = this.current[0].length;
+        
+        // Pre-allocate result array for better performance
+        const rotated = Array.from({ length: cols }, () => 
+            Array.from({ length: rows }, () => 0)
         );
+        
+        // Optimized rotation algorithm
+        for (let i = 0; i < rows; i++) {
+            for (let j = 0; j < cols; j++) {
+                rotated[j][rows - 1 - i] = this.current[i][j];
+            }
+        }
+        
+        // Cache the result for future use
+        Piece._rotationCache.set(cacheKey, rotated);
+        
+        // Limit cache size to prevent memory leaks
+        if (Piece._rotationCache.size > 100) {
+            const firstKey = Piece._rotationCache.keys().next().value;
+            Piece._rotationCache.delete(firstKey);
+        }
+        
+        return rotated;
+    }
+
+    // Performance utility: clear rotation cache when needed
+    static clearRotationCache() {
+        Piece._rotationCache.clear();
     }
 } 
