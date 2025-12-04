@@ -156,6 +156,24 @@ export class Renderer {
         this.ctx.textAlign = 'start';
     }
 
+    drawPaused() {
+        // Semi-transparent overlay
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+        
+        // Paused text
+        this.ctx.fillStyle = 'white';
+        this.ctx.textAlign = 'center';
+        this.ctx.font = '48px Arial';
+        this.ctx.fillText('PAUSED', this.centerX, this.centerY);
+        
+        this.ctx.font = '20px Arial';
+        this.ctx.fillText('Press P to resume', this.centerX, this.centerY + 40);
+        
+        // Reset text alignment
+        this.ctx.textAlign = 'start';
+    }
+
     drawNextPiece(piece, colors) {
         // Early return if no next piece
         if (!piece.next) {
@@ -208,21 +226,23 @@ export class Renderer {
     }
 
     // Optimized animation with fast cloning
-    async animateLinesClear(lines, colors, board) {
+    // boardState can be either a Board object or a pre-cloned grid array
+    async animateLinesClear(lines, colors, boardState) {
         const duration = GAME_CONFIG.ANIMATIONS.LINE_CLEAR.BASE_DURATION * 
             Math.pow(GAME_CONFIG.ANIMATIONS.LINE_CLEAR.MULTIPLIER, lines.length - 1);
         
-        // Use fast cloning instead of JSON methods
-        const originalBoard = board.fastClone();
+        // Support both Board objects and raw grid arrays
+        const grid = Array.isArray(boardState) ? boardState : boardState.grid;
+        const width = Array.isArray(boardState) ? boardState[0].length : boardState.width;
         
         // Pre-calculate positions for better performance
         const lineBlocks = [];
         lines.forEach(y => {
-            for (let x = 0; x < board.width; x++) {
+            for (let x = 0; x < width; x++) {
                 lineBlocks.push({
                     x: x * this.blockSize,
                     y: y * this.blockSize,
-                    originalColor: originalBoard[y][x] ? colors[originalBoard[y][x]] : null
+                    originalColor: grid[y] && grid[y][x] ? colors[grid[y][x]] : null
                 });
             }
         });
@@ -250,79 +270,5 @@ export class Renderer {
         }
     }
 
-    // Optimized gravity switch animation
-    async animateGravitySwitch(board, isInvertedMode, colors) {
-        const steps = GAME_CONFIG.ANIMATIONS.GRAVITY_SWITCH.STEPS;
-        const stepDuration = GAME_CONFIG.ANIMATIONS.GRAVITY_SWITCH.DURATION / steps;
-        
-        // Use fast cloning
-        const originalBoard = board.fastClone();
-        
-        // Pre-calculate all block movements for better performance
-        const blockMovements = [];
-        
-        for (let y = 0; y < board.height; y++) {
-            for (let x = 0; x < board.width; x++) {
-                if (originalBoard[y][x]) {
-                    let targetY;
-                    
-                    if (isInvertedMode) {
-                        // Count blocks above
-                        let blocksAbove = 0;
-                        for (let checkY = 0; checkY < y; checkY++) {
-                            if (originalBoard[checkY][x]) blocksAbove++;
-                        }
-                        targetY = blocksAbove;
-                    } else {
-                        // Count blocks below
-                        let blocksBelow = 0;
-                        for (let checkY = board.height - 1; checkY > y; checkY--) {
-                            if (originalBoard[checkY][x]) blocksBelow++;
-                        }
-                        targetY = board.height - 1 - blocksBelow;
-                    }
-                    
-                    blockMovements.push({
-                        x: x,
-                        startY: y,
-                        targetY: targetY,
-                        color: colors[originalBoard[y][x]]
-                    });
-                }
-            }
-        }
 
-        // Animate movement
-        for (let step = 0; step <= steps; step++) {
-            this.clear();
-            
-            const progress = step / steps;
-            
-            // Batch draw by color for better performance
-            const colorGroups = {};
-            
-            blockMovements.forEach(movement => {
-                const currentY = movement.startY + (movement.targetY - movement.startY) * progress;
-                
-                if (!colorGroups[movement.color]) {
-                    colorGroups[movement.color] = [];
-                }
-                
-                colorGroups[movement.color].push({
-                    x: movement.x * this.blockSize,
-                    y: currentY * this.blockSize
-                });
-            });
-            
-            // Draw all blocks of the same color together
-            Object.entries(colorGroups).forEach(([color, blocks]) => {
-                this.ctx.fillStyle = color;
-                blocks.forEach(block => {
-                    this.ctx.fillRect(block.x, block.y, this.blockSizeMinus1, this.blockSizeMinus1);
-                });
-            });
-            
-            await new Promise(resolve => setTimeout(resolve, stepDuration));
-        }
-    }
 } 

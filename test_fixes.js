@@ -1,6 +1,16 @@
 // 🧪 Script de Testing para verificar correcciones de bugs
 // Usar en la consola del navegador después de cargar el juego
 
+// Helper function to display test results
+function addTestResult(message, type) {
+    const styles = {
+        pass: 'color: #10b981; font-weight: bold;',
+        fail: 'color: #ef4444; font-weight: bold;',
+        warning: 'color: #f59e0b; font-weight: bold;'
+    };
+    console.log(`%c${message}`, styles[type] || '');
+}
+
 class BugTester {
     constructor() {
         this.stats = {

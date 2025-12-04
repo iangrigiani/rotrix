@@ -25,6 +25,17 @@ export class Controls {
                 return;
             }
 
+            // Pause toggle (works even when paused)
+            if (e.key === 'p' || e.key === 'P') {
+                this.game.togglePause();
+                return;
+            }
+
+            // Don't process other keys when paused
+            if (this.game.paused) {
+                return;
+            }
+
             const currentTime = performance.now();
 
             switch(e.key) {
@@ -40,7 +51,7 @@ export class Controls {
                 case 'ArrowDown':
                     // Allow faster down movement
                     if (currentTime - this.lastMoveTime >= 25) {
-                        this.game.movePiece(0, this.game.gravity);
+                        this.game.movePiece(0, 1); // Move down
                         this.lastMoveTime = currentTime;
                     }
                     break;
@@ -50,6 +61,11 @@ export class Controls {
                         this.game.rotatePiece();
                         this.lastRotateTime = currentTime;
                     }
+                    break;
+                case ' ':
+                    // Hard drop: piece falls until collision
+                    e.preventDefault(); // Prevent page scroll
+                    this.game.hardDrop();
                     break;
             }
         });

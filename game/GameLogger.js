@@ -35,13 +35,12 @@ export class GameLogger {
         }
     }
 
-    logPieceSpawn(piece, position, isInvertedMode) {
+    logPieceSpawn(piece, position) {
         this.pieceCounter++;
         this.log('PIECE_SPAWN', {
             pieceNumber: this.pieceCounter,
             pieceType: this.getPieceTypeName(piece),
             position: { ...position },
-            isInvertedMode,
             pieceMatrix: this.matrixToString(piece.current),
             nextPiece: piece.next ? this.getPieceTypeName({ current: piece.next }) : null
         });
@@ -58,40 +57,22 @@ export class GameLogger {
         });
     }
 
-    logPieceLanded(piece, finalPosition, isInvertedMode) {
+    logPieceLanded(piece, finalPosition) {
         this.log('PIECE_LANDED', {
             pieceNumber: this.pieceCounter,
             pieceType: this.getPieceTypeName(piece),
             finalPosition: { ...finalPosition },
-            isInvertedMode,
             pieceMatrix: this.matrixToString(piece.current)
         });
     }
 
-    logLinesCleared(clearedLines, board, isInvertedMode) {
+    logLinesCleared(clearedLines, board) {
+        // Support both Board objects and raw grid arrays
+        const grid = Array.isArray(board) ? board : board.grid;
         this.log('LINES_CLEARED', {
             linesCleared: clearedLines.length,
             lineNumbers: [...clearedLines],
-            isInvertedMode,
-            boardBeforeGravity: this.boardToString(board.grid)
-        });
-    }
-
-    logGravityApplied(boardBefore, boardAfter, isInvertedMode) {
-        this.log('GRAVITY_APPLIED', {
-            isInvertedMode,
-            boardBefore: this.boardToString(boardBefore),
-            boardAfter: this.boardToString(boardAfter)
-        });
-    }
-
-    logGravitySwitch(boardBefore, boardAfter, newGravityMode, piecesPlaced) {
-        this.log('GRAVITY_SWITCH', {
-            piecesPlaced,
-            oldGravityMode: !newGravityMode,
-            newGravityMode,
-            boardBefore: this.boardToString(boardBefore),
-            boardAfter: this.boardToString(boardAfter)
+            boardBeforeGravity: this.boardToString(grid)
         });
     }
 

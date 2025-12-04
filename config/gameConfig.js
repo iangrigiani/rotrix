@@ -23,22 +23,12 @@ export const GAME_CONFIG = {
         4: 5000            // Cuatro líneas simultáneas
     },
 
-    // Mecánica de juego
-    GRAVITY_SWITCH: {
-        MIN_PIECES: 8,    // Mínimo de piezas antes del cambio
-        MAX_PIECES: 18     // Máximo de piezas antes del cambio
-    },
-
     // Configuración de animaciones
     ANIMATIONS: {
         LINE_CLEAR: {
             BASE_DURATION: 200,    // Duración base para una línea (ms)
             MULTIPLIER: 1.5,       // Multiplicador por cada línea adicional
             FLASH_COLOR: '#FFF'    // Color del destello
-        },
-        GRAVITY_SWITCH: {
-            DURATION: 800,         // Duración de la animación de cambio de gravedad (ms)
-            STEPS: 20              // Cantidad de pasos en la animación
         }
     }
 }; 

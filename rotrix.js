@@ -24,13 +24,9 @@ export class RotrixGame {
         this.controls = new Controls(this);
         this.logger = new GameLogger();
 
-        this.piecesPlaced = 0;
-        this.nextGravitySwitch = this.calculateNextGravitySwitch();
-        this.gravity = 1;
         this.dropSpeed = GAME_CONFIG.INITIAL_SPEED;
-        this.isInvertedMode = false;
         this.gameOver = false;
-        this.switchingGravity = false;
+        this.paused = false;
         
         this.score = 0;
         this.level = 1;
@@ -84,12 +80,11 @@ export class RotrixGame {
         }
 
         this.piece.spawn(this.board.width);
-        this.piece.position.y = this.isInvertedMode ? 
-            this.board.height - this.piece.current.length : 0;
+        this.piece.position.y = 0;
 
-        this.logger.logPieceSpawn(this.piece, this.piece.position, this.isInvertedMode);
+        this.logger.logPieceSpawn(this.piece, this.piece.position);
 
-        if (this.board.checkCollision(this.piece, this.piece.position, this.isInvertedMode)) {
+        if (this.board.checkCollision(this.piece, this.piece.position)) {
             this.endGame();
             return false;
         }
@@ -109,65 +104,38 @@ export class RotrixGame {
             y: this.piece.position.y + dy
         };
         
-        if (!this.board.checkCollision(this.piece, newPos, this.isInvertedMode)) {
+        if (!this.board.checkCollision(this.piece, newPos)) {
             this.piece.position = newPos;
             
             const moveType = dx < 0 ? 'LEFT' : dx > 0 ? 'RIGHT' : 'DOWN';
             this.logger.logPieceMove(this.piece, oldPos, newPos, moveType);
             
-        } else if (dy === this.gravity) {
-            this.logger.logPieceLanded(this.piece, this.piece.position, this.isInvertedMode);
-            
-            // 🔧 DEBUG: Estado del board ANTES de mergePiece
-            console.log('=== ANTES DE MERGE ===');
-            console.log('Pieza a mergear:', this.logger.getPieceTypeName(this.piece));
-            console.log('Posición:', this.piece.position);
-            console.log('Board ANTES:');
-            for (let y = 0; y < this.board.height; y++) {
-                const row = this.board.grid[y];
-                const rowStr = row.map(c => c || '.').join('');
-                console.log(`Row ${y}: "${rowStr}"`);
-            }
+        } else if (dy > 0) {
+            // Piece landed (moving down)
+            this.logger.logPieceLanded(this.piece, this.piece.position);
             
             this.board.mergePiece(this.piece);
-            
-            // 🔧 DEBUG: Estado del board DESPUÉS de mergePiece
-            console.log('=== DESPUÉS DE MERGE ===');
-            for (let y = 0; y < this.board.height; y++) {
-                const row = this.board.grid[y];
-                const rowStr = row.map(c => c || '.').join('');
-                const isFull = row.every(cell => cell !== 0);
-                console.log(`Row ${y}: "${rowStr}" (full: ${isFull})`);
-            }
-            
             this.piece.current = null;
             
-            const linesCleared = this.board.checkLines(this.isInvertedMode);
+            // Save board state BEFORE line clearing for animation
+            const boardBeforeClear = this.board.fastClone();
+            
+            const linesCleared = this.board.checkLines();
             
             if (linesCleared > 0) {
                 this.logger.logLinesCleared(
                     this.board.getLastClearedLines(), 
-                    this.board, 
-                    this.isInvertedMode
+                    boardBeforeClear  // Use the saved state BEFORE clearing, not after
                 );
                 
+                // Pass the pre-clear board state for correct animation
                 await this.renderer.animateLinesClear(
                     this.board.getLastClearedLines(), 
                     Piece.COLORS,
-                    this.board
+                    boardBeforeClear
                 );
                 this.updateScore(GAME_CONFIG.LINE_POINTS[linesCleared] || 
                     GAME_CONFIG.LINE_POINTS[1] * linesCleared);
-                
-                // 🔧 FIX: NO aplicar gravedad aquí - checkLines() ya la aplicó
-                // La doble aplicación de gravedad causaba el bug de duplicación de piezas
-            }
-            
-            this.piecesPlaced++;
-            
-            if (this.piecesPlaced >= this.nextGravitySwitch) {
-                await this.switchGravity();
-                return;
             }
             
             if (!this.gameOver) {
@@ -192,60 +160,48 @@ export class RotrixGame {
         
         this.piece.current = rotated;
         
-        if (this.board.checkCollision(this.piece, this.piece.position, this.isInvertedMode)) {
+        if (this.board.checkCollision(this.piece, this.piece.position)) {
             this.piece.current = originalPiece;
         } else {
             this.logger.logPieceMove(this.piece, oldPos, this.piece.position, 'ROTATE');
         }
     }
 
-    async switchGravity() {
-        if (this.switchingGravity) {
-            this.logger.log('GRAVITY_SWITCH_PREVENTED', {
-                reason: 'Cambio de gravedad ya en progreso'
-            });
+    async hardDrop() {
+        if (this.gameOver || !this.piece.current) {
             return;
         }
-        
-        this.switchingGravity = true;
-        
-        const boardBefore = this.board.fastClone();
-        const piecesPlacedSnapshot = this.piecesPlaced;
-        
-        this.isInvertedMode = !this.isInvertedMode;
-        this.gravity = this.isInvertedMode ? -1 : 1;
-        
-        const nextPiece = this.piece.next;
-        
-        await this.renderer.animateGravitySwitch(this.board, this.isInvertedMode, Piece.COLORS);
-        
-        this.board.applyGravity(this.isInvertedMode);
-        
-        this.logger.logGravitySwitch(
-            boardBefore, 
-            this.board.grid, 
-            this.isInvertedMode, 
-            piecesPlacedSnapshot
-        );
-        
-        this.piecesPlaced = 0;
-        this.nextGravitySwitch = this.calculateNextGravitySwitch();
-        
-        this.piece.current = null;
-        this.piece.next = nextPiece;
-        
-        if (!this.gameOver) {
-            this.spawnPiece();
+
+        // Find the lowest valid position (falling down)
+        let currentPos = { ...this.piece.position };
+        let nextPos = {
+            x: currentPos.x,
+            y: currentPos.y + 1
+        };
+
+        // Keep moving down until collision
+        while (!this.board.checkCollision(this.piece, nextPos)) {
+            currentPos = { ...nextPos };
+            nextPos.y += 1;
         }
-        
-        this.switchingGravity = false;
+
+        // Move piece to the final valid position
+        if (currentPos.y !== this.piece.position.y) {
+            const oldPos = { ...this.piece.position };
+            this.piece.position = currentPos;
+            this.logger.logPieceMove(this.piece, oldPos, currentPos, 'HARD_DROP');
+            
+            // Trigger landing logic by calling movePiece down
+            await this.movePiece(0, 1);
+        }
     }
+
 
     endGame() {
         this.gameOver = true;
         this.piece.current = null;
         
-        this.logger.logGameOver(this.score, this.level, this.logger.pieceCounter);
+        //this.logger.logGameOver(this.score, this.level, this.logger.pieceCounter);
         
         if (this.animationFrameId) {
             cancelAnimationFrame(this.animationFrameId);
@@ -256,12 +212,7 @@ export class RotrixGame {
 
     reset() {
         this.board.reset();
-        this.piecesPlaced = 0;
-        this.nextGravitySwitch = this.calculateNextGravitySwitch();
-        this.isInvertedMode = false;
-        this.gravity = 1;
         this.gameOver = false;
-        this.switchingGravity = false;
         this.score = 0;
         this.level = 1;
         this.dropSpeed = GAME_CONFIG.INITIAL_SPEED;
@@ -283,20 +234,43 @@ export class RotrixGame {
         if (this.gameOver) {
             this.renderer.drawGameOver();
         }
+        if (this.paused && !this.gameOver) {
+            this.renderer.drawPaused();
+        }
     }
 
     gameLoop(currentTime = 0) {
         if (this.gameOver) return;
         
-        if (currentTime - this.lastDropTime >= this.dropSpeed) {
-            this.movePiece(0, this.gravity);
-            this.updateScore(GAME_CONFIG.TICK_POINTS);
-            this.lastDropTime = currentTime;
+        // Skip game updates when paused, but continue drawing
+        if (!this.paused) {
+            if (currentTime - this.lastDropTime >= this.dropSpeed) {
+                this.movePiece(0, 1); // Move down
+                this.updateScore(GAME_CONFIG.TICK_POINTS);
+                this.lastDropTime = currentTime;
+            }
         }
         
         this.draw();
         
         this.animationFrameId = requestAnimationFrame((time) => this.gameLoop(time));
+    }
+
+    togglePause() {
+        if (this.gameOver) return;
+        
+        this.paused = !this.paused;
+        this.logger.log('GAME_PAUSED', {
+            paused: this.paused
+        });
+        
+        if (this.paused) {
+            console.log('[Game] Paused');
+        } else {
+            console.log('[Game] Resumed');
+            // Reset drop timer to prevent instant drop on resume
+            this.lastDropTime = performance.now();
+        }
     }
 
     updateScore(points) {
@@ -305,11 +279,6 @@ export class RotrixGame {
         this.checkLevelUp();
     }
 
-    calculateNextGravitySwitch() {
-        const min = GAME_CONFIG.GRAVITY_SWITCH.MIN_PIECES;
-        const max = GAME_CONFIG.GRAVITY_SWITCH.MAX_PIECES;
-        return Math.floor(Math.random() * (max - min + 1)) + min;
-    }
 }
 
 window.onload = () => {
@@ -337,9 +306,6 @@ window.onload = () => {
         showBoard: () => {
             console.log('=== ESTADO ACTUAL DEL TABLERO ===');
             console.log(game.logger.boardToString(game.board.grid));
-            console.log(`Modo invertido: ${game.isInvertedMode}`);
-            console.log(`Piezas colocadas: ${game.piecesPlaced}`);
-            console.log(`Próximo cambio de gravedad: ${game.nextGravitySwitch}`);
         },
         
         // Mostrar información de la pieza actual
@@ -372,19 +338,6 @@ window.onload = () => {
             });
         },
         
-        // Análisis de cambios de gravedad
-        analyzeGravitySwitches: () => {
-            const gravityEvents = game.logger.getEventsByType('GRAVITY_SWITCH');
-            console.log('=== ANÁLISIS DE CAMBIOS DE GRAVEDAD ===');
-            console.log(`Total cambios de gravedad: ${gravityEvents.length}`);
-            
-            gravityEvents.forEach((event, index) => {
-                console.log(`Cambio ${index + 1}:`);
-                console.log(`  Piezas colocadas: ${event.piecesPlaced}`);
-                console.log(`  Modo anterior: ${event.oldGravityMode ? 'Invertido' : 'Normal'}`);
-                console.log(`  Modo nuevo: ${event.newGravityMode ? 'Invertido' : 'Normal'}`);
-            });
-        },
         
         // Activar/desactivar logging en consola
         toggleConsoleLogging: () => {
@@ -403,7 +356,6 @@ window.onload = () => {
     console.log('  - showBoard(): Mostrar estado actual del tablero');
     console.log('  - showCurrentPiece(): Mostrar información de pieza actual');
     console.log('  - analyzeLineClears(): Análisis de líneas completadas');
-    console.log('  - analyzeGravitySwitches(): Análisis de cambios de gravedad');
     console.log('  - toggleConsoleLogging(): Activar/desactivar logs en consola');
     console.log('');
     console.log('Ejemplo: debugRotrix.getLastEvents(5)');
