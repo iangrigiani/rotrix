@@ -270,5 +270,158 @@ export class Renderer {
         }
     }
 
+    async animateGravityFlip(board, colors, wasGravityDown) {
+        // New gravity direction (opposite of wasGravityDown)
+        const newGravityDown = !wasGravityDown;
+        
+        // Keep iterating until no pieces can fall anymore
+        let hasPiecesFalling = true;
+        let iteration = 0;
+        const maxIterations = 100; // Safety limit to prevent infinite loops
+        
+        while (hasPiecesFalling && iteration < maxIterations) {
+            iteration++;
+            hasPiecesFalling = false;
+            
+            // Re-identify bodies to get current state
+            const { bodyId: bodyIdArray, bodies: currentBodies } = board.identifyRigidBodies();
+            
+            if (currentBodies.length === 0) break;
+            
+            // Get falling order based on current dependencies
+            const fallingOrder = board.getFallingOrder(newGravityDown);
+            
+            if (fallingOrder.length === 0) break;
+            
+            // Process ALL bodies that can fall in this iteration
+            // After all have fallen, we'll recalculate for the next iteration
+            for (const { body: originalBody, bodyId: id } of fallingOrder) {
+                // Find the current body in the updated state
+                let currentBody = null;
+                if (originalBody.blocks.length > 0) {
+                    const firstBlock = originalBody.blocks[0];
+                    if (firstBlock.y >= 0 && firstBlock.y < board.height && 
+                        firstBlock.x >= 0 && firstBlock.x < board.width &&
+                        bodyIdArray[firstBlock.y][firstBlock.x] >= 0) {
+                        const foundId = bodyIdArray[firstBlock.y][firstBlock.x];
+                        currentBody = currentBodies.find(b => b.id === foundId);
+                    }
+                }
+                
+                // If not found by ID, try to find by matching block positions
+                if (!currentBody) {
+                    for (const b of currentBodies) {
+                        let matches = 0;
+                        for (const origBlock of originalBody.blocks) {
+                            if (b.blocks.some(bl => bl.x === origBlock.x && bl.y === origBlock.y && bl.color === origBlock.color)) {
+                                matches++;
+                            }
+                        }
+                        if (matches >= Math.min(originalBody.blocks.length, b.blocks.length) * 0.5) {
+                            currentBody = b;
+                            break;
+                        }
+                    }
+                }
+                
+                if (!currentBody) continue; // Body not found, skip
+                
+                // Recalculate bodies to get current state after previous pieces have fallen
+                const { bodyId: updatedBodyIdArray, bodies: updatedBodies } = board.identifyRigidBodies();
+                
+                // Find the updated body with current positions
+                let updatedBody = updatedBodies.find(b => b.id === currentBody.id);
+                if (!updatedBody) {
+                    // Try to find by piece ID if body ID changed
+                    const pieceId = board.pieceIdGrid[currentBody.blocks[0].y]?.[currentBody.blocks[0].x];
+                    if (pieceId) {
+                        updatedBody = updatedBodies.find(b => {
+                            if (b.blocks.length === 0) return false;
+                            return board.pieceIdGrid[b.blocks[0].y]?.[b.blocks[0].x] === pieceId;
+                        });
+                    }
+                }
+                
+                // Use updated body if found, otherwise use current body
+                const bodyToFall = updatedBody || currentBody;
+                
+                // Calculate how far this body can fall with current board state
+                let fallDistance = board.calculateFallDistance(bodyToFall, newGravityDown, updatedBodyIdArray);
+                
+                if (fallDistance === 0) continue; // Can't fall
+                
+                hasPiecesFalling = true; // At least one piece can fall
+                
+                // Store current block positions for animation (use updated positions)
+                const startBlocks = bodyToFall.blocks.map(b => ({ y: b.y, x: b.x, color: b.color }));
+                
+                // Animate the fall
+                const direction = newGravityDown ? 1 : -1;
+                const steps = fallDistance;
+                const stepDelay = 5; // ms per step
+                
+                for (let step = 0; step <= steps; step++) {
+                    // Clear and redraw board
+                    this.clear();
+                    
+                    // Get current bodies state for drawing
+                    const { bodies: drawBodies } = board.identifyRigidBodies();
+                    
+                    // Draw all bodies from current board state
+                    for (const otherBody of drawBodies) {
+                        // Skip if this is the currently falling body
+                        let isCurrentBody = false;
+                        for (const startBlock of startBlocks) {
+                            if (otherBody.blocks.some(b => b.x === startBlock.x && b.y === startBlock.y)) {
+                                isCurrentBody = true;
+                                break;
+                            }
+                        }
+                        if (isCurrentBody) continue;
+                        
+                        for (const block of otherBody.blocks) {
+                            this.ctx.fillStyle = colors[block.color];
+                            this.ctx.fillRect(
+                                block.x * this.blockSize,
+                                block.y * this.blockSize,
+                                this.blockSizeMinus1,
+                                this.blockSizeMinus1
+                            );
+                        }
+                    }
+                    
+                    // Draw the falling body at its current animated position
+                    const currentOffset = step * direction;
+                    for (const block of startBlocks) {
+                        const drawY = block.y + currentOffset;
+                        if (drawY >= 0 && drawY < board.height) {
+                            this.ctx.fillStyle = colors[block.color];
+                            this.ctx.fillRect(
+                                block.x * this.blockSize,
+                                drawY * this.blockSize,
+                                this.blockSizeMinus1,
+                                this.blockSizeMinus1
+                            );
+                        }
+                    }
+                    
+                    await new Promise(resolve => setTimeout(resolve, stepDelay));
+                }
+                
+                // Update board: move the body (use bodyToFall which has current positions)
+                board.moveBody(bodyToFall, fallDistance * direction, updatedBodyIdArray);
+                
+                // Update the original body reference
+                originalBody.blocks = bodyToFall.blocks.map(b => ({ ...b }));
+                
+                // Wait 0.5 seconds before next piece falls
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+            // After processing all pieces in this iteration, loop will continue
+            // to recalculate and process any pieces that can still fall
+        }
+    }
+
 
 } 

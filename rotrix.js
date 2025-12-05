@@ -30,11 +30,19 @@ export class RotrixGame {
         
         this.score = 0;
         this.level = 1;
+        this.totalLines = 0;
         this.scoreDisplay = document.getElementById('scoreDisplay');
         this.levelDisplay = document.getElementById('levelDisplay');
+        this.linesDisplay = document.getElementById('linesDisplay');
         
         this.lastDropTime = 0;
         this.animationFrameId = null;
+        
+        // Gravity flipping system
+        this.gravityDown = true; // true = pieces fall down, false = pieces fall up
+        this.spawnCount = 0;
+        this.spawnsUntilFlip = this.generateSpawnsUntilFlip();
+        this.isFlippingGravity = false; // Flag to prevent actions during flip animation
         
         this.init();
     }
@@ -65,6 +73,10 @@ export class RotrixGame {
         }
     }
 
+    generateSpawnsUntilFlip() {
+        return Math.floor(Math.random() * (18 - 8 + 1)) + 8; // Random between 8 and 18
+    }
+
     init() {
         this.spawnPiece();
         this.gameLoop();
@@ -80,19 +92,36 @@ export class RotrixGame {
         }
 
         this.piece.spawn(this.board.width);
-        this.piece.position.y = 0;
+        
+        // Spawn at top if gravity is down, at bottom if gravity is up
+        if (this.gravityDown) {
+            this.piece.position.y = 0;
+        } else {
+            // Spawn at bottom, accounting for piece height
+            this.piece.position.y = this.board.height - this.piece.current.length;
+        }
 
         this.logger.logPieceSpawn(this.piece, this.piece.position);
 
-        if (this.board.checkCollision(this.piece, this.piece.position)) {
+        if (this.board.checkCollision(this.piece, this.piece.position, this.gravityDown)) {
             this.endGame();
             return false;
         }
+        
+        // Increment spawn count and check if gravity should flip
+        this.spawnCount++;
+        if (this.spawnCount >= this.spawnsUntilFlip) {
+            this.spawnCount = 0;
+            this.spawnsUntilFlip = this.generateSpawnsUntilFlip();
+            // Flip gravity asynchronously (will hide piece during animation)
+            this.flipGravity();
+        }
+        
         return true;
     }
 
     async movePiece(dx, dy) {
-        if (this.gameOver) return;
+        if (this.gameOver || this.isFlippingGravity) return;
         
         if (!this.piece.current) {
             return;
@@ -104,14 +133,18 @@ export class RotrixGame {
             y: this.piece.position.y + dy
         };
         
-        if (!this.board.checkCollision(this.piece, newPos)) {
+        // Determine if this is a gravity movement (down or up based on gravity direction)
+        const isGravityMove = (this.gravityDown && dy > 0) || (!this.gravityDown && dy < 0);
+        
+        if (!this.board.checkCollision(this.piece, newPos, this.gravityDown)) {
             this.piece.position = newPos;
             
-            const moveType = dx < 0 ? 'LEFT' : dx > 0 ? 'RIGHT' : 'DOWN';
+            const moveType = dx < 0 ? 'LEFT' : dx > 0 ? 'RIGHT' : 
+                           (this.gravityDown ? 'DOWN' : 'UP');
             this.logger.logPieceMove(this.piece, oldPos, newPos, moveType);
             
-        } else if (dy > 0) {
-            // Piece landed (moving down)
+        } else if (isGravityMove) {
+            // Piece landed (moving in gravity direction)
             this.logger.logPieceLanded(this.piece, this.piece.position);
             
             this.board.mergePiece(this.piece);
@@ -120,7 +153,7 @@ export class RotrixGame {
             // Save board state BEFORE line clearing for animation
             const boardBeforeClear = this.board.fastClone();
             
-            const linesCleared = this.board.checkLines();
+            const linesCleared = this.board.checkLines(this.gravityDown);
             
             if (linesCleared > 0) {
                 this.logger.logLinesCleared(
@@ -136,6 +169,7 @@ export class RotrixGame {
                 );
                 this.updateScore(GAME_CONFIG.LINE_POINTS[linesCleared] || 
                     GAME_CONFIG.LINE_POINTS[1] * linesCleared);
+                this.updateLines(linesCleared);
             }
             
             if (!this.gameOver) {
@@ -145,7 +179,7 @@ export class RotrixGame {
     }
 
     rotatePiece() {
-        if (!this.piece.current) {
+        if (!this.piece.current || this.isFlippingGravity) {
             return;
         }
         
@@ -160,7 +194,7 @@ export class RotrixGame {
         
         this.piece.current = rotated;
         
-        if (this.board.checkCollision(this.piece, this.piece.position)) {
+        if (this.board.checkCollision(this.piece, this.piece.position, this.gravityDown)) {
             this.piece.current = originalPiece;
         } else {
             this.logger.logPieceMove(this.piece, oldPos, this.piece.position, 'ROTATE');
@@ -168,21 +202,22 @@ export class RotrixGame {
     }
 
     async hardDrop() {
-        if (this.gameOver || !this.piece.current) {
+        if (this.gameOver || !this.piece.current || this.isFlippingGravity) {
             return;
         }
 
-        // Find the lowest valid position (falling down)
+        // Find the furthest valid position in gravity direction
         let currentPos = { ...this.piece.position };
+        const gravityDy = this.gravityDown ? 1 : -1;
         let nextPos = {
             x: currentPos.x,
-            y: currentPos.y + 1
+            y: currentPos.y + gravityDy
         };
 
-        // Keep moving down until collision
-        while (!this.board.checkCollision(this.piece, nextPos)) {
+        // Keep moving in gravity direction until collision
+        while (!this.board.checkCollision(this.piece, nextPos, this.gravityDown)) {
             currentPos = { ...nextPos };
-            nextPos.y += 1;
+            nextPos.y += gravityDy;
         }
 
         // Move piece to the final valid position
@@ -191,8 +226,8 @@ export class RotrixGame {
             this.piece.position = currentPos;
             this.logger.logPieceMove(this.piece, oldPos, currentPos, 'HARD_DROP');
             
-            // Trigger landing logic by calling movePiece down
-            await this.movePiece(0, 1);
+            // Trigger landing logic by calling movePiece in gravity direction
+            await this.movePiece(0, gravityDy);
         }
     }
 
@@ -215,9 +250,15 @@ export class RotrixGame {
         this.gameOver = false;
         this.score = 0;
         this.level = 1;
+        this.totalLines = 0;
         this.dropSpeed = GAME_CONFIG.INITIAL_SPEED;
         this.lastDropTime = 0;
+        this.gravityDown = true;
+        this.spawnCount = 0;
+        this.spawnsUntilFlip = this.generateSpawnsUntilFlip();
+        this.isFlippingGravity = false;
         this.updateScore(0);
+        this.updateLines(0);
         this.levelDisplay.textContent = this.level;
         this.spawnPiece();
         this.draw();
@@ -228,7 +269,8 @@ export class RotrixGame {
         this.renderer.clear();
         this.renderer.drawBoard(this.board, Piece.COLORS);
         this.renderer.drawNextPiece(this.piece, Piece.COLORS);
-        if (!this.gameOver && this.piece.current) {
+        // Don't draw piece during gravity flip animation
+        if (!this.gameOver && this.piece.current && !this.isFlippingGravity) {
             this.renderer.drawPiece(this.piece, Piece.COLORS);
         }
         if (this.gameOver) {
@@ -242,10 +284,12 @@ export class RotrixGame {
     gameLoop(currentTime = 0) {
         if (this.gameOver) return;
         
-        // Skip game updates when paused, but continue drawing
-        if (!this.paused) {
+        // Skip game updates when paused or flipping gravity, but continue drawing
+        if (!this.paused && !this.isFlippingGravity) {
             if (currentTime - this.lastDropTime >= this.dropSpeed) {
-                this.movePiece(0, 1); // Move down
+                // Move in gravity direction
+                const gravityDy = this.gravityDown ? 1 : -1;
+                this.movePiece(0, gravityDy);
                 this.updateScore(GAME_CONFIG.TICK_POINTS);
                 this.lastDropTime = currentTime;
             }
@@ -277,6 +321,146 @@ export class RotrixGame {
         this.score += points;
         this.scoreDisplay.textContent = this.score;
         this.checkLevelUp();
+    }
+
+    updateLines(linesCleared) {
+        this.totalLines += linesCleared;
+        if (this.linesDisplay) {
+            this.linesDisplay.textContent = this.totalLines;
+        }
+    }
+
+    async flipGravity() {
+        if (this.isFlippingGravity) return;
+        
+        this.isFlippingGravity = true;
+        
+        // Hide current piece during animation
+        const savedPiece = this.piece.current;
+        const savedPiecePos = { ...this.piece.position };
+        this.piece.current = null;
+        
+        // Save old gravity direction for animation
+        const oldGravityDown = this.gravityDown;
+        
+        // Save BEFORE state visualization
+        const beforeVisualization = this.board.visualizePieceIdGrid();
+        
+        // Flip gravity direction first (animation will use new direction)
+        this.gravityDown = !this.gravityDown;
+        
+        // Animate pieces falling to the opposite side
+        // The animation updates the board as pieces fall
+        await this.renderer.animateGravityFlip(this.board, Piece.COLORS, oldGravityDown);
+        
+        // Save AFTER state visualization
+        const afterVisualization = this.board.visualizePieceIdGrid();
+        
+        // Create comparison file with both states
+        this.createComparisonFile(beforeVisualization, afterVisualization);
+        
+        // After all pieces have fallen, check for complete lines
+        // Save board state BEFORE line clearing for animation
+        const boardBeforeClear = this.board.fastClone();
+        
+        const linesCleared = this.board.checkLines(this.gravityDown);
+        
+        if (linesCleared > 0) {
+            this.logger.logLinesCleared(
+                this.board.getLastClearedLines(), 
+                boardBeforeClear
+            );
+            
+            // Animate line clearing
+            await this.renderer.animateLinesClear(
+                this.board.getLastClearedLines(), 
+                Piece.COLORS,
+                boardBeforeClear
+            );
+            this.updateScore(GAME_CONFIG.LINE_POINTS[linesCleared] || 
+                GAME_CONFIG.LINE_POINTS[1] * linesCleared);
+            this.updateLines(linesCleared);
+        }
+        
+        // Restore piece and adjust its position
+        this.piece.current = savedPiece;
+        if (savedPiece) {
+            // Adjust piece position based on new gravity
+            if (this.gravityDown) {
+                // Gravity flipped to down: piece should be at top
+                this.piece.position.y = 0;
+            } else {
+                // Gravity flipped to up: piece should be at bottom
+                this.piece.position.y = this.board.height - this.piece.current.length;
+            }
+            this.piece.position.x = savedPiecePos.x;
+            
+            // Check if new position is valid
+            if (this.board.checkCollision(this.piece, this.piece.position, this.gravityDown)) {
+                this.endGame();
+                return;
+            }
+        }
+        
+        this.isFlippingGravity = false;
+        this.draw();
+    }
+
+    createComparisonFile(beforeVisualization, afterVisualization) {
+        try {
+            if (!beforeVisualization || !afterVisualization) return;
+            
+            const comparison = `
+================================================================================
+PIECE ID GRID COMPARISON - GRAVITY FLIP
+================================================================================
+Generated: ${new Date().toISOString()}
+Gravity Direction Changed To: ${this.gravityDown ? 'DOWN' : 'UP'}
+
+================================================================================
+BEFORE GRAVITY CHANGE:
+================================================================================
+${beforeVisualization}
+
+================================================================================
+AFTER GRAVITY CHANGE (All pieces settled):
+================================================================================
+${afterVisualization}
+
+================================================================================
+NOTES:
+- Piece IDs are shown as 2-digit numbers (01, 02, 03, etc.)
+- Empty cells are shown as " . "
+- Each piece ID represents a rigid body (blocks from the same original piece)
+- Compare the two grids to see how pieces moved during gravity flip
+- Piece IDs should remain the same, only positions change
+================================================================================
+`;
+            
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const blob = new Blob([comparison], { type: 'text/plain' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `pieceId-comparison-${timestamp}.txt`;
+            link.click();
+            
+            console.log(`📊 Comparison file exported: pieceId-comparison-${timestamp}.txt`);
+        } catch (e) {
+            console.error('Error creating comparison file:', e);
+        }
+    }
+
+    async forceGravityFlip() {
+        // Force gravity flip and reset spawn counter
+        // This is called manually by the user (e.g., via backspace key)
+        if (this.isFlippingGravity || this.gameOver) return;
+        
+        // Reset spawn counter
+        this.spawnCount = 0;
+        this.spawnsUntilFlip = this.generateSpawnsUntilFlip();
+        
+        // Trigger gravity flip
+        await this.flipGravity();
     }
 
 }

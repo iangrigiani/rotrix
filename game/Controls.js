@@ -31,8 +31,17 @@ export class Controls {
                 return;
             }
 
-            // Don't process other keys when paused
-            if (this.game.paused) {
+            // Force gravity flip with backspace (works even when paused, but not during flip)
+            if (e.key === 'Backspace') {
+                if (!this.game.isFlippingGravity && !this.game.gameOver) {
+                    e.preventDefault(); // Prevent browser back navigation
+                    this.game.forceGravityFlip();
+                }
+                return;
+            }
+
+            // Don't process other keys when paused or flipping gravity
+            if (this.game.paused || this.game.isFlippingGravity) {
                 return;
             }
 
@@ -49,9 +58,10 @@ export class Controls {
                     }
                     break;
                 case 'ArrowDown':
-                    // Allow faster down movement
+                    // Move in gravity direction (down when gravity is down, up when gravity is up)
                     if (currentTime - this.lastMoveTime >= 25) {
-                        this.game.movePiece(0, 1); // Move down
+                        const gravityDy = this.game.gravityDown ? 1 : -1;
+                        this.game.movePiece(0, gravityDy);
                         this.lastMoveTime = currentTime;
                     }
                     break;
