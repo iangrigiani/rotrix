@@ -8,8 +8,9 @@ export class Renderer {
         this.nextCtx = nextPieceCanvas.getContext('2d');
         this.blockSize = blockSize;
         
-        // Tamaño más pequeño para la próxima pieza
-        this.nextBlockSize = 25;
+        // Tamaño más pequeño para la próxima pieza (responsive)
+        const isMobile = window.innerWidth <= 768;
+        this.nextBlockSize = isMobile ? 18 : 25;
         
         // Cache DOM elements to avoid repeated getElementById calls
         this.scoreDisplay = document.getElementById('scoreDisplay');

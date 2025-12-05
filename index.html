@@ -2,19 +2,27 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <title>Rotrix - Tetris con Gravedad Invertida</title>
     <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
         body {
             margin: 0;
-            padding: 0;
+            padding: 10px;
             background: #1a1a1a;
             color: white;
-            font-family: Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
             display: flex;
             justify-content: center;
-            align-items: center;
+            align-items: flex-start;
             min-height: 100vh;
+            overflow-x: hidden;
             /* Prevent layout shifts during animations */
             contain: layout;
         }
@@ -23,6 +31,8 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            width: 100%;
+            max-width: 500px;
             /* Hardware acceleration for smoother animations */
             transform: translateZ(0);
         }
@@ -30,34 +40,55 @@
         .game-header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: flex-start;
             width: 100%;
-            max-width: 500px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
+            gap: 15px;
             /* Prevent repaints during score updates */
             will-change: contents;
         }
 
         .game-info {
             display: flex;
-            gap: 30px;
-            font-size: 20px;
-            font-weight: bold;
+            flex-direction: column;
+            gap: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            flex: 1;
             /* Optimize text rendering */
             text-rendering: optimizeSpeed;
         }
 
-        .score, .level {
+        .score, .level, .lines {
             color: #FFD700;
             /* Reduce repaints for frequently changing text */
             contain: layout style;
+            white-space: nowrap;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .score-label, .level-label, .lines-label {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 11px;
+            font-weight: 400;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
+        }
+
+        .score-value, .level-value, .lines-value {
+            color: #FFD700;
+            font-size: 18px;
+            font-weight: 700;
         }
 
         .next-piece {
-            width: 120px;
-            height: 120px;
+            width: 80px;
+            height: 80px;
             border: 2px solid #444;
             background: #000;
+            flex-shrink: 0;
             /* GPU acceleration */
             transform: translateZ(0);
         }
@@ -66,6 +97,9 @@
             border: 2px solid #444;
             background: #000;
             display: block;
+            width: 100%;
+            max-width: 100%;
+            height: auto;
             /* Optimize canvas rendering */
             image-rendering: pixelated;
             /* Prevent canvas clearing flicker */
@@ -75,12 +109,61 @@
         .controls {
             color: white;
             text-align: center;
+            margin-top: 15px;
+            font-size: 12px;
             /* Prevent layout shifts */
             contain: layout;
         }
 
         .controls p {
-            margin: 5px 0;
+            margin: 3px 0;
+        }
+
+        /* Mobile touch controls */
+        .mobile-controls {
+            display: none;
+            width: 100%;
+            max-width: 500px;
+            margin-top: 20px;
+            padding: 0 10px;
+        }
+
+        .control-row {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .control-button {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            font-size: 24px;
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+            transition: all 0.1s;
+        }
+
+        .control-button:active {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(0.95);
+        }
+
+        .control-button.wide {
+            width: 130px;
+        }
+
+        .control-button.rotate {
+            font-size: 20px;
         }
 
         /* 🔧 Estilos para debugging */
@@ -124,6 +207,7 @@
         }
 
         .toggle-debug {
+            display: none; /* Hidden by default */
             position: fixed;
             top: 10px;
             right: 10px;
@@ -137,30 +221,132 @@
             z-index: 1001;
         }
 
-        /* Responsive design improvements */
+        /* Mobile styles */
         @media (max-width: 768px) {
-            .game-info {
-                font-size: 18px;
-                gap: 20px;
+            body {
+                padding: 5px;
+                align-items: flex-start;
             }
-            
+
+            .game-container {
+                max-width: 100%;
+            }
+
+            .game-header {
+                flex-direction: row;
+                margin-bottom: 10px;
+                gap: 10px;
+            }
+
+            .game-info {
+                font-size: 12px;
+                gap: 8px;
+            }
+
+            .score-label, .level-label, .lines-label {
+                font-size: 10px;
+            }
+
+            .score-value, .level-value, .lines-value {
+                font-size: 16px;
+            }
+
+            .next-piece {
+                width: 70px;
+                height: 70px;
+            }
+
             .controls {
-                font-size: 14px;
+                font-size: 11px;
+                margin-top: 10px;
+            }
+
+            .mobile-controls {
+                display: block;
             }
 
             .debug-panel {
-                position: relative;
-                top: auto;
-                right: auto;
-                margin-top: 20px;
+                position: fixed;
+                top: 5px;
+                right: 5px;
+                left: 5px;
                 max-width: none;
+                max-height: 80vh;
+                overflow-y: auto;
+                font-size: 11px;
+                padding: 10px;
             }
 
             .toggle-debug {
-                position: relative;
-                top: auto;
-                right: auto;
-                margin-top: 10px;
+                position: fixed;
+                top: 5px;
+                right: 5px;
+                padding: 6px 10px;
+                font-size: 11px;
+                z-index: 1002;
+            }
+
+            .debug-button {
+                padding: 4px 8px;
+                font-size: 10px;
+            }
+        }
+
+        /* Small mobile devices */
+        @media (max-width: 480px) {
+            .game-info {
+                font-size: 12px;
+            }
+
+            .score, .level {
+                font-size: 12px;
+            }
+
+            .next-piece {
+                width: 60px;
+                height: 60px;
+            }
+
+            .control-button {
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
+            }
+
+            .control-button.wide {
+                width: 110px;
+            }
+        }
+
+        /* Landscape mobile */
+        @media (max-width: 768px) and (orientation: landscape) {
+            body {
+                padding: 5px;
+            }
+
+            .game-container {
+                flex-direction: row;
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+            .game-header {
+                flex-direction: column;
+                width: auto;
+                margin-bottom: 0;
+            }
+
+            .next-piece {
+                width: 60px;
+                height: 60px;
+            }
+
+            canvas {
+                max-width: calc(100vh - 100px);
+            }
+
+            .mobile-controls {
+                display: none;
             }
         }
 
@@ -202,20 +388,35 @@
     <div class="game-container">
         <div class="game-header">
             <div class="game-info">
-                <div>
-                    <div class="score">Score: <span id="scoreDisplay">0</span></div>
-                    <div class="score" style="margin-top: 10px;">Lines: <span id="linesDisplay">0</span></div>
+                <div class="score">
+                    <div class="score-label">Score</div>
+                    <div class="score-value" id="scoreDisplay">0</div>
                 </div>
-                <div class="level">Level: <span id="levelDisplay">1</span></div>
+                <div class="lines">
+                    <div class="lines-label">Lines</div>
+                    <div class="lines-value" id="linesDisplay">0</div>
+                </div>
+                <div class="level">
+                    <div class="level-label">Level</div>
+                    <div class="level-value" id="levelDisplay">1</div>
+                </div>
             </div>
             <canvas id="nextPieceCanvas" class="next-piece"></canvas>
         </div>
         <canvas id="gameCanvas"></canvas>
-        <div class="controls">
-            <p>Controles:</p>
-            <p>← → : Mover pieza</p>
-            <p>↑ : Rotar pieza</p>
-            <p>↓ : Caída rápida</p>
+        
+        <!-- Mobile touch controls -->
+        <div class="mobile-controls">
+            <div class="control-row">
+                <button class="control-button wide" id="dropBtn">⬇⬇</button>
+                <button class="control-button" id="downBtn">↓</button>
+                <button class="control-button" id="gravityBtn">⌫</button>
+            </div>
+            <div class="control-row">
+                <button class="control-button" id="leftBtn">←</button>
+                <button class="control-button rotate" id="rotateBtn">↻</button>
+                <button class="control-button" id="rightBtn">→</button>
+            </div>
         </div>
     </div>
 
@@ -291,6 +492,88 @@
                 e.preventDefault();
                 runQuickTest();
             }
+        });
+
+        // Update mobile control button symbols based on gravity direction
+        function updateGravityButtons() {
+            const dropBtn = document.getElementById('dropBtn');
+            const downBtn = document.getElementById('downBtn');
+            
+            if (!dropBtn || !downBtn || !window.rotrixGame) return;
+            
+            if (window.rotrixGame.gravityDown) {
+                // Gravity is DOWN: show down arrows
+                dropBtn.textContent = '⬇⬇';
+                downBtn.textContent = '↓';
+            } else {
+                // Gravity is UP: show up arrows
+                dropBtn.textContent = '⬆⬆';
+                downBtn.textContent = '↑';
+            }
+        }
+
+        // Mobile touch controls
+        function setupMobileControls() {
+            const leftBtn = document.getElementById('leftBtn');
+            const rightBtn = document.getElementById('rightBtn');
+            const rotateBtn = document.getElementById('rotateBtn');
+            const dropBtn = document.getElementById('dropBtn');
+            const downBtn = document.getElementById('downBtn');
+            const gravityBtn = document.getElementById('gravityBtn');
+
+            if (!leftBtn || !window.rotrixGame) return;
+
+            // Update button symbols based on initial gravity
+            updateGravityButtons();
+
+            function handleButton(action) {
+                return (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (window.rotrixGame && !window.rotrixGame.gameOver && !window.rotrixGame.paused) {
+                        action();
+                    }
+                };
+            }
+
+            leftBtn.addEventListener('touchstart', handleButton(() => window.rotrixGame.movePiece(-1, 0)));
+            rightBtn.addEventListener('touchstart', handleButton(() => window.rotrixGame.movePiece(1, 0)));
+            rotateBtn.addEventListener('touchstart', handleButton(() => window.rotrixGame.rotatePiece()));
+            dropBtn.addEventListener('touchstart', handleButton(() => window.rotrixGame.hardDrop()));
+            downBtn.addEventListener('touchstart', handleButton(() => {
+                const dy = window.rotrixGame.gravityDown ? 1 : -1;
+                window.rotrixGame.movePiece(0, dy);
+            }));
+            gravityBtn.addEventListener('touchstart', handleButton(() => {
+                window.rotrixGame.forceGravityFlip().then(() => {
+                    // Update buttons after gravity changes
+                    updateGravityButtons();
+                });
+            }));
+
+            // Prevent default touch behaviors
+            [leftBtn, rightBtn, rotateBtn, dropBtn, downBtn, gravityBtn].forEach(btn => {
+                btn.addEventListener('touchend', (e) => e.preventDefault());
+                btn.addEventListener('touchcancel', (e) => e.preventDefault());
+            });
+        }
+
+        // Make updateGravityButtons globally accessible
+        window.updateGravityButtons = updateGravityButtons;
+
+        // Setup mobile controls after game loads
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                setupMobileControls();
+                // Hook into gravity changes to update buttons
+                if (window.rotrixGame) {
+                    const originalFlipGravity = window.rotrixGame.flipGravity.bind(window.rotrixGame);
+                    window.rotrixGame.flipGravity = async function() {
+                        await originalFlipGravity();
+                        updateGravityButtons();
+                    };
+                }
+            }, 500);
         });
     </script>
 </body>

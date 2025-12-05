@@ -13,14 +13,25 @@ export class RotrixGame {
     ) {
         this.canvas = document.getElementById('gameCanvas');
         this.nextPieceCanvas = document.getElementById('nextPieceCanvas');
-        this.canvas.width = width * blockSize;
-        this.canvas.height = height * blockSize;
-        this.nextPieceCanvas.width = 120;
-        this.nextPieceCanvas.height = 120;
+        
+        // Calculate responsive block size for mobile
+        const isMobile = window.innerWidth <= 768;
+        const availableWidth = Math.min(window.innerWidth - 40, 500);
+        const calculatedBlockSize = isMobile ? Math.floor(availableWidth / width) : blockSize;
+        this.blockSize = calculatedBlockSize;
+        
+        this.canvas.width = width * this.blockSize;
+        this.canvas.height = height * this.blockSize;
+        this.nextPieceCanvas.width = isMobile ? 70 : 120;
+        this.nextPieceCanvas.height = isMobile ? 70 : 120;
+        
+        // Set canvas display size for responsive scaling
+        this.canvas.style.width = `${this.canvas.width}px`;
+        this.canvas.style.height = `${this.canvas.height}px`;
 
         this.board = new Board(width, height);
         this.piece = new Piece();
-        this.renderer = new Renderer(this.canvas, this.nextPieceCanvas, blockSize);
+        this.renderer = new Renderer(this.canvas, this.nextPieceCanvas, this.blockSize);
         this.controls = new Controls(this);
         this.logger = new GameLogger();
 
@@ -404,6 +415,11 @@ export class RotrixGame {
         
         this.isFlippingGravity = false;
         this.draw();
+        
+        // Update mobile control buttons if they exist
+        if (typeof updateGravityButtons === 'function') {
+            updateGravityButtons();
+        }
     }
 
     createComparisonFile(beforeVisualization, afterVisualization) {
