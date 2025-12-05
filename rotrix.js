@@ -344,7 +344,7 @@ export class RotrixGame {
         const oldGravityDown = this.gravityDown;
         
         // Save BEFORE state visualization
-        const beforeVisualization = this.board.visualizePieceIdGrid();
+        //const beforeVisualization = this.board.visualizePieceIdGrid();
         
         // Flip gravity direction first (animation will use new direction)
         this.gravityDown = !this.gravityDown;
@@ -354,10 +354,10 @@ export class RotrixGame {
         await this.renderer.animateGravityFlip(this.board, Piece.COLORS, oldGravityDown);
         
         // Save AFTER state visualization
-        const afterVisualization = this.board.visualizePieceIdGrid();
+        //const afterVisualization = this.board.visualizePieceIdGrid();
         
         // Create comparison file with both states
-        this.createComparisonFile(beforeVisualization, afterVisualization);
+        //this.createComparisonFile(beforeVisualization, afterVisualization);
         
         // After all pieces have fallen, check for complete lines
         // Save board state BEFORE line clearing for animation
