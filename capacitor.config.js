@@ -1,0 +1,30 @@
+const config = {
+  appId: 'com.rotrix.app',
+  appName: 'Rotrix',
+  webDir: 'dist',
+  server: {
+    androidScheme: 'https'
+  },
+  plugins: {
+    SplashScreen: {
+      launchShowDuration: 2000,
+      launchAutoHide: true,
+      backgroundColor: '#1a1a1a',
+      androidSplashResourceName: 'splash',
+      androidScaleType: 'CENTER_CROP',
+      showSpinner: false,
+      splashFullScreen: true,
+      splashImmersive: true
+    },
+    StatusBar: {
+      style: 'dark',
+      backgroundColor: '#1a1a1a'
+    },
+    AdMob: {
+      appId: 'ca-app-pub-3940256099942544~3347511713' // Test app ID - replace with your own from AdMob console
+    }
+  }
+};
+
+module.exports = config;
+

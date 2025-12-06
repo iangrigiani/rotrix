@@ -357,8 +357,8 @@
     </style>
 </head>
 <body>
-    <!-- 🔧 Botón para mostrar/ocultar panel de debugging -->
-    <button class="toggle-debug" onclick="toggleDebugPanel()">🐛 Debug</button>
+    <!-- 🔧 Botón para mostrar/ocultar panel de debugging (hidden in production) -->
+    <button class="toggle-debug" id="debugToggle" onclick="toggleDebugPanel()" style="display: none;">🐛 Debug</button>
 
     <!-- 🔧 Panel de debugging -->
     <div id="debugPanel" class="debug-panel">
@@ -420,6 +420,69 @@
         </div>
     </div>
 
+    <!-- Capacitor -->
+    <script type="module">
+        import { Capacitor } from '@capacitor/core';
+        import { App } from '@capacitor/app';
+        import { StatusBar, Style } from '@capacitor/status-bar';
+        import { SplashScreen } from '@capacitor/splash-screen';
+        import { initializeNativeServices } from './src/native/index.js';
+        import { HapticService } from './src/native/haptics.js';
+        
+        // Make Capacitor available globally
+        window.Capacitor = Capacitor;
+        window.isNative = Capacitor.isNativePlatform();
+        
+        // Initialize native services
+        if (window.isNative) {
+            initializeNativeServices().catch(console.error);
+            
+            // Configure status bar
+            StatusBar.setStyle({ style: Style.Dark });
+            StatusBar.setBackgroundColor({ color: '#1a1a1a' });
+            
+            // Hide splash screen after app is ready
+            SplashScreen.hide();
+            
+            // Handle app state changes
+            App.addListener('appStateChange', ({ isActive }) => {
+                if (window.rotrixGame) {
+                    if (isActive) {
+                        // App came to foreground - resume game if paused
+                        if (window.rotrixGame.paused && !window.rotrixGame.gameOver) {
+                            window.rotrixGame.togglePause();
+                        }
+                    } else {
+                        // App went to background - pause game
+                        if (!window.rotrixGame.paused && !window.rotrixGame.gameOver) {
+                            window.rotrixGame.togglePause();
+                        }
+                    }
+                }
+            });
+            
+            // Handle back button (Android)
+            App.addListener('backButton', () => {
+                if (window.rotrixGame && !window.rotrixGame.gameOver) {
+                    window.rotrixGame.togglePause();
+                } else {
+                    App.exitApp();
+                }
+            });
+        }
+        
+        // Show debug button only in development/web
+        if (!window.isNative) {
+            const debugToggle = document.getElementById('debugToggle');
+            if (debugToggle) {
+                debugToggle.style.display = 'block';
+            }
+        }
+        
+        // Make HapticService available globally for game integration
+        window.HapticService = HapticService;
+    </script>
+    
     <!-- Scripts principales -->
     <script type="module" src="rotrix.js"></script>
     <script type="module" src="test_fixes.js"></script>
@@ -536,19 +599,33 @@
                 };
             }
 
-            leftBtn.addEventListener('touchstart', handleButton(() => window.rotrixGame.movePiece(-1, 0)));
-            rightBtn.addEventListener('touchstart', handleButton(() => window.rotrixGame.movePiece(1, 0)));
-            rotateBtn.addEventListener('touchstart', handleButton(() => window.rotrixGame.rotatePiece()));
-            dropBtn.addEventListener('touchstart', handleButton(() => window.rotrixGame.hardDrop()));
+            leftBtn.addEventListener('touchstart', handleButton(() => {
+                window.rotrixGame.movePiece(-1, 0);
+                if (window.HapticService) window.HapticService.buttonPress().catch(() => {});
+            }));
+            rightBtn.addEventListener('touchstart', handleButton(() => {
+                window.rotrixGame.movePiece(1, 0);
+                if (window.HapticService) window.HapticService.buttonPress().catch(() => {});
+            }));
+            rotateBtn.addEventListener('touchstart', handleButton(() => {
+                window.rotrixGame.rotatePiece();
+                if (window.HapticService) window.HapticService.buttonPress().catch(() => {});
+            }));
+            dropBtn.addEventListener('touchstart', handleButton(() => {
+                window.rotrixGame.hardDrop();
+                if (window.HapticService) window.HapticService.buttonPress().catch(() => {});
+            }));
             downBtn.addEventListener('touchstart', handleButton(() => {
                 const dy = window.rotrixGame.gravityDown ? 1 : -1;
                 window.rotrixGame.movePiece(0, dy);
+                if (window.HapticService) window.HapticService.buttonPress().catch(() => {});
             }));
             gravityBtn.addEventListener('touchstart', handleButton(() => {
                 window.rotrixGame.forceGravityFlip().then(() => {
                     // Update buttons after gravity changes
                     updateGravityButtons();
                 });
+                if (window.HapticService) window.HapticService.buttonPress().catch(() => {});
             }));
 
             // Prevent default touch behaviors

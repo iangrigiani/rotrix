@@ -3,13 +3,35 @@
   "version": "1.0.0",
   "description": "A block-stacking puzzle game with gravity-switching mechanic",
   "scripts": {
-    "start": "http-server -c-1"
+    "start": "http-server -c-1",
+    "build": "node build.js",
+    "cap:add:android": "npx cap add android",
+    "cap:add:ios": "npx cap add ios",
+    "cap:sync": "npm run build && npx cap sync",
+    "cap:copy": "npm run build && npx cap copy",
+    "cap:open:android": "npx cap open android",
+    "cap:open:ios": "npx cap open ios",
+    "cap:run:android": "npm run cap:sync && npx cap run android",
+    "cap:run:ios": "npm run cap:sync && npx cap run ios",
+    "android:build": "npm run cap:sync && cd android && ./gradlew assembleRelease",
+    "android:build:debug": "npm run cap:sync && cd android && ./gradlew assembleDebug",
+    "android:install": "cd android && ./gradlew installDebug",
+    "ios:build": "npm run cap:sync && echo 'Open Xcode and build from there: npm run cap:open:ios'"
   },
   "devDependencies": {
+    "@capacitor/android": "^7.4.4",
+    "@capacitor/ios": "^7.4.4",
     "http-server": "^14.1.1"
   },
   "main": "rotrix.js",
   "dependencies": {
+    "@capacitor-community/admob": "^7.2.0",
+    "@capacitor/app": "^7.1.0",
+    "@capacitor/cli": "^7.4.4",
+    "@capacitor/core": "^7.4.4",
+    "@capacitor/haptics": "^7.0.2",
+    "@capacitor/splash-screen": "^7.0.3",
+    "@capacitor/status-bar": "^7.0.3",
     "ansi-styles": "^4.3.0",
     "async": "^3.2.6",
     "basic-auth": "^2.0.1",

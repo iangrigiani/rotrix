@@ -154,6 +154,11 @@ export class RotrixGame {
                            (this.gravityDown ? 'DOWN' : 'UP');
             this.logger.logPieceMove(this.piece, oldPos, newPos, moveType);
             
+            // Haptic feedback for manual moves (not gravity)
+            if (!isGravityMove && window.HapticService) {
+                window.HapticService.gameAction().catch(() => {});
+            }
+            
         } else if (isGravityMove) {
             // Piece landed (moving in gravity direction)
             this.logger.logPieceLanded(this.piece, this.piece.position);
@@ -171,6 +176,11 @@ export class RotrixGame {
                     this.board.getLastClearedLines(), 
                     boardBeforeClear  // Use the saved state BEFORE clearing, not after
                 );
+                
+                // Haptic feedback for line clear
+                if (window.HapticService) {
+                    window.HapticService.lineClear().catch(() => {});
+                }
                 
                 // Pass the pre-clear board state for correct animation
                 await this.renderer.animateLinesClear(
@@ -209,6 +219,10 @@ export class RotrixGame {
             this.piece.current = originalPiece;
         } else {
             this.logger.logPieceMove(this.piece, oldPos, this.piece.position, 'ROTATE');
+            // Haptic feedback for rotation
+            if (window.HapticService) {
+                window.HapticService.gameAction().catch(() => {});
+            }
         }
     }
 
@@ -246,6 +260,11 @@ export class RotrixGame {
     endGame() {
         this.gameOver = true;
         this.piece.current = null;
+        
+        // Haptic feedback for game over
+        if (window.HapticService) {
+            window.HapticService.gameOver().catch(() => {});
+        }
         
         //this.logger.logGameOver(this.score, this.level, this.logger.pieceCounter);
         
@@ -360,6 +379,11 @@ export class RotrixGame {
         // Flip gravity direction first (animation will use new direction)
         this.gravityDown = !this.gravityDown;
         
+        // Haptic feedback for gravity flip
+        if (window.HapticService) {
+            window.HapticService.gravityFlip().catch(() => {});
+        }
+        
         // Animate pieces falling to the opposite side
         // The animation updates the board as pieces fall
         await this.renderer.animateGravityFlip(this.board, Piece.COLORS, oldGravityDown);
@@ -381,6 +405,11 @@ export class RotrixGame {
                 this.board.getLastClearedLines(), 
                 boardBeforeClear
             );
+            
+            // Haptic feedback for line clear after gravity flip
+            if (window.HapticService) {
+                window.HapticService.lineClear().catch(() => {});
+            }
             
             // Animate line clearing
             await this.renderer.animateLinesClear(
