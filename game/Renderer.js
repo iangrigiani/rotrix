@@ -189,7 +189,7 @@ export class Renderer {
         this.ctx.font = '18px Arial';
         this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
         this.ctx.fillText('Tap back button again to quit', this.centerX, this.centerY + 20);
-        this.ctx.fillText('Tap screen or press P to resume', this.centerX, this.centerY + 50);
+        this.ctx.fillText('Tap screen to resume', this.centerX, this.centerY + 50);
         
         // Reset text alignment
         this.ctx.textAlign = 'start';
