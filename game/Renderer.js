@@ -121,7 +121,7 @@ export class Renderer {
         this.ctx.fillStyle = '#FFD700';
         this.ctx.font = '36px Arial';
         this.ctx.textAlign = 'center';
-        this.ctx.fillText(`¡NIVEL ${level}!`, this.centerX, this.centerY);
+        this.ctx.fillText(`LEVEL ${level}!`, this.centerX, this.centerY);
         
         // Restore only what was changed
         this.ctx.globalCompositeOperation = originalComposite;
@@ -147,11 +147,11 @@ export class Renderer {
         this.ctx.fillText('¡GAME OVER!', this.centerX, this.centerY - 40);
         
         this.ctx.font = '24px Arial';
-        this.ctx.fillText(`Nivel alcanzado: ${this.levelDisplay.textContent}`, this.centerX, this.centerY);
-        this.ctx.fillText(`Puntaje Final: ${this.scoreDisplay.textContent}`, this.centerX, this.centerY + 40);
+        this.ctx.fillText(`Level reached: ${this.levelDisplay.textContent}`, this.centerX, this.centerY);
+        this.ctx.fillText(`Final Score: ${this.scoreDisplay.textContent}`, this.centerX, this.centerY + 40);
         
         this.ctx.font = '20px Arial';
-        this.ctx.fillText('Presiona ENTER para reiniciar', this.centerX, this.centerY + 60);
+        this.ctx.fillText('Tap screen to restart', this.centerX, this.centerY + 60);
         
         // Reset text alignment
         this.ctx.textAlign = 'start';

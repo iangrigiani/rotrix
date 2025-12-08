@@ -77,12 +77,15 @@ export class RotrixGame {
         this.lastDropTime = 0;
         this.animationFrameId = null;
         
-        // Touch drag system for horizontal movement
+        // Touch drag system for horizontal and vertical movement
         this.touchStartX = null;
+        this.touchStartY = null;
         this.touchLastX = null;
+        this.touchLastY = null;
         this.touchStartTime = null;
         this.isDragging = false;
         this.dragVelocity = 0;
+        this.dragVelocityY = 0;
         this.inertiaActive = false;
         this.inertiaVelocity = 0;
         
@@ -323,10 +326,13 @@ export class RotrixGame {
         this.dropSpeed = GAME_CONFIG.INITIAL_SPEED;
         this.lastDropTime = 0;
         this.touchStartX = null;
+        this.touchStartY = null;
         this.touchLastX = null;
+        this.touchLastY = null;
         this.touchStartTime = null;
         this.isDragging = false;
         this.dragVelocity = 0;
+        this.dragVelocityY = 0;
         this.inertiaActive = false;
         this.inertiaVelocity = 0;
         this.gravityDown = true;
@@ -647,13 +653,22 @@ window.onload = () => {
                 return;
             }
             
-            if (!game.gameOver && !game.paused && !game.isFlippingGravity) {
+            if (game.gameOver) {
+                // Don't restart on touchstart - wait for touchend to confirm it's a tap
+                e.preventDefault();
+                return;
+            }
+            
+            if (!game.paused && !game.isFlippingGravity) {
                 // Start drag tracking
                 game.touchStartX = touchStartX;
+                game.touchStartY = touchStartY;
                 game.touchLastX = touchStartX;
+                game.touchLastY = touchStartY;
                 game.touchStartTime = touchStartTime;
                 game.isDragging = true;
                 game.inertiaActive = false;
+                game.dragVelocityY = 0;
                 e.preventDefault();
             }
         }, { passive: false });
@@ -681,7 +696,7 @@ window.onload = () => {
                 hasMoved = true;
             }
             
-            // Only process horizontal movement
+            // Process horizontal movement
             if (deltaX > 0) {
                 const horizontalDelta = currentX - game.touchLastX;
                 const blockSize = game.blockSize;
@@ -693,7 +708,7 @@ window.onload = () => {
                     game.touchLastX = currentX;
                 }
                 
-                // Calculate velocity for inertia
+                // Calculate horizontal velocity for inertia
                 const timeDelta = currentTime - lastTouchTime;
                 if (timeDelta > 0) {
                     const velocity = (currentX - lastTouchX) / timeDelta; // pixels per ms
@@ -701,8 +716,23 @@ window.onload = () => {
                 }
                 
                 lastTouchX = currentX;
-                lastTouchTime = currentTime;
             }
+            
+            // Process vertical movement
+            if (deltaY > 0) {
+                const verticalDelta = currentY - (game.touchLastY || touchStartY);
+                const timeDelta = currentTime - lastTouchTime;
+                
+                // Calculate vertical velocity
+                if (timeDelta > 0) {
+                    const velocityY = verticalDelta / timeDelta;
+                    game.dragVelocityY = velocityY;
+                }
+                
+                game.touchLastY = currentY;
+            }
+            
+            lastTouchTime = currentTime;
             
             e.preventDefault();
         }, { passive: false });
@@ -717,21 +747,62 @@ window.onload = () => {
                 return;
             }
             
+            // If game over, restart on any tap
+            if (game.gameOver) {
+                game.reset();
+                touchHandled = false;
+                e.preventDefault();
+                return;
+            }
+            
             if (game.isDragging) {
                 game.isDragging = false;
+                
+                // Calculate vertical delta
+                const verticalDelta = game.touchLastY - game.touchStartY;
+                const HARD_DROP_THRESHOLD = game.blockSize * 3; // 3 blocks worth of movement
                 
                 // If it was a quick tap without movement, rotate piece
                 if (!hasMoved && touchDuration < TAP_TIME_THRESHOLD) {
                     game.rotatePiece();
-                } else if (hasMoved && Math.abs(game.dragVelocity) > 0.1) {
-                    // Apply inertia based on velocity
-                    game.inertiaActive = true;
-                    game.inertiaVelocity = game.dragVelocity * 0.5; // Scale down velocity
+                } else {
+                    // Check for hard drop (large vertical movement)
+                    if (Math.abs(verticalDelta) >= HARD_DROP_THRESHOLD) {
+                        // Check if movement is in gravity direction
+                        const isDownward = verticalDelta > 0;
+                        const matchesGravity = (game.gravityDown && isDownward) || (!game.gravityDown && !isDownward);
+                        
+                        if (matchesGravity) {
+                            // Hard drop in gravity direction
+                            game.hardDrop();
+                        }
+                    } else {
+                        // Apply horizontal inertia if there was horizontal movement
+                        if (hasMoved && Math.abs(game.dragVelocity) > 0.1) {
+                            game.inertiaActive = true;
+                            game.inertiaVelocity = game.dragVelocity * 0.5; // Scale down velocity
+                        }
+                        
+                        // Apply vertical movement based on gravity direction
+                        if (Math.abs(verticalDelta) > game.blockSize * 0.5) {
+                            const isDownward = verticalDelta > 0;
+                            const matchesGravity = (game.gravityDown && isDownward) || (!game.gravityDown && !isDownward);
+                            
+                            if (matchesGravity) {
+                                // Move piece in gravity direction
+                                const gravityDy = game.gravityDown ? 1 : -1;
+                                game.movePiece(0, gravityDy);
+                            }
+                        }
+                    }
                 }
                 
                 game.touchStartX = null;
+                game.touchStartY = null;
                 game.touchLastX = null;
+                game.touchLastY = null;
                 game.touchStartTime = null;
+                game.dragVelocityY = 0;
             }
             
             touchHandled = false;
@@ -744,7 +815,9 @@ window.onload = () => {
             if (!touchHandled) {
                 if (game.showingQuitConfirmation) {
                     game.resumeFromQuitConfirmation();
-                } else if (!game.gameOver && !game.paused && !game.isFlippingGravity) {
+                } else if (game.gameOver) {
+                    game.reset();
+                } else if (!game.paused && !game.isFlippingGravity) {
                     game.rotatePiece();
                 }
             }

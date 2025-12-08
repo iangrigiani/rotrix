@@ -543,16 +543,20 @@
     <script>
         // Define back button handler immediately (before module scripts load)
         window.handleBackButtonPress = function() {
-            if (window.rotrixGame && !window.rotrixGame.gameOver) {
-                if (window.rotrixGame.showingQuitConfirmation) {
+            const exitApp = () => {
+                if (window.CapacitorApp && typeof window.CapacitorApp.exitApp === 'function') {
+                    window.CapacitorApp.exitApp();
+                } else if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
+                    window.Capacitor.Plugins.App.exitApp();
+                }
+            };
+            
+            if (window.rotrixGame) {
+                if (window.rotrixGame.gameOver) {
+                    // Game over - exit app immediately
+                    exitApp();
+                } else if (window.rotrixGame.showingQuitConfirmation) {
                     // Second press - exit app
-                    const exitApp = () => {
-                        if (window.CapacitorApp && typeof window.CapacitorApp.exitApp === 'function') {
-                            window.CapacitorApp.exitApp();
-                        } else if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
-                            window.Capacitor.Plugins.App.exitApp();
-                        }
-                    };
                     exitApp();
                     setTimeout(exitApp, 50);
                 } else {
@@ -560,10 +564,8 @@
                     window.rotrixGame.showQuitConfirmation();
                 }
             } else {
-                // Game over or no game - exit app
-                if (window.CapacitorApp && typeof window.CapacitorApp.exitApp === 'function') {
-                    window.CapacitorApp.exitApp();
-                }
+                // No game - exit app
+                exitApp();
             }
         };
     </script>
