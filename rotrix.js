@@ -582,16 +582,37 @@ window.onload = () => {
     window.rotrixGame = game;
     window.rotrixLogger = game.logger;
     
-    // Add tap-to-resume when showing quit confirmation
+    // Add tap handlers for canvas
     const gameCanvas = document.getElementById('gameCanvas');
     if (gameCanvas) {
-        const resumeHandler = () => {
+        let touchHandled = false;
+        
+        const canvasTapHandler = () => {
             if (game.showingQuitConfirmation) {
+                // Resume from quit confirmation
                 game.resumeFromQuitConfirmation();
+            } else if (!game.gameOver && !game.paused && !game.isFlippingGravity) {
+                // Rotate piece when tapping the board during gameplay
+                game.rotatePiece();
             }
         };
-        gameCanvas.addEventListener('click', resumeHandler);
-        gameCanvas.addEventListener('touchstart', resumeHandler);
+        
+        // Handle touch events (mobile)
+        gameCanvas.addEventListener('touchstart', (e) => {
+            touchHandled = true;
+            canvasTapHandler();
+            // Prevent click event from firing after touch
+            e.preventDefault();
+        }, { passive: false });
+        
+        // Handle click events (desktop)
+        gameCanvas.addEventListener('click', (e) => {
+            // Only handle click if touch wasn't already handled
+            if (!touchHandled) {
+                canvasTapHandler();
+            }
+            touchHandled = false; // Reset for next interaction
+        });
     }
     
     // Hide splash screen after game is ready (only on native platforms)
