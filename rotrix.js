@@ -14,20 +14,47 @@ export class RotrixGame {
         this.canvas = document.getElementById('gameCanvas');
         this.nextPieceCanvas = document.getElementById('nextPieceCanvas');
         
-        // Calculate responsive block size for mobile
+        // Calculate responsive block size for mobile - ensure it fits on screen
         const isMobile = window.innerWidth <= 768;
-        const availableWidth = Math.min(window.innerWidth - 40, 500);
-        const calculatedBlockSize = isMobile ? Math.floor(availableWidth / width) : blockSize;
-        this.blockSize = calculatedBlockSize;
+        
+        if (isMobile) {
+            // Calculate available space accounting for header, padding, and controls
+            // Use dynamic viewport height (dvh) which accounts for mobile browser UI
+            const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+            const safeAreaTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue('env(safe-area-inset-top)')) || 0;
+            const safeAreaBottom = parseInt(getComputedStyle(document.documentElement).getPropertyValue('env(safe-area-inset-bottom)')) || 0;
+            
+            // More accurate measurements for mobile
+            const headerHeight = 50; // Compact header height
+            const controlsHeight = 120; // Mobile controls (2 rows of buttons)
+            const spacing = 15; // Total spacing between elements
+            
+            const availableWidth = Math.min(window.innerWidth - 20, 500);
+            const availableHeight = viewportHeight - headerHeight - controlsHeight - spacing - safeAreaTop - safeAreaBottom;
+            
+            // Calculate block size based on both width and height constraints
+            const blockSizeByWidth = Math.floor(availableWidth / width);
+            const blockSizeByHeight = Math.floor(availableHeight / height);
+            
+            // Use the smaller block size to ensure it fits both dimensions
+            this.blockSize = Math.min(blockSizeByWidth, blockSizeByHeight, blockSize);
+            
+            // Ensure minimum block size for playability
+            this.blockSize = Math.max(this.blockSize, 15);
+        } else {
+            this.blockSize = blockSize;
+        }
         
         this.canvas.width = width * this.blockSize;
         this.canvas.height = height * this.blockSize;
-        this.nextPieceCanvas.width = isMobile ? 70 : 120;
-        this.nextPieceCanvas.height = isMobile ? 70 : 120;
+        this.nextPieceCanvas.width = isMobile ? Math.min(70, this.blockSize * 4) : 120;
+        this.nextPieceCanvas.height = isMobile ? Math.min(70, this.blockSize * 4) : 120;
         
-        // Set canvas display size for responsive scaling
-        this.canvas.style.width = `${this.canvas.width}px`;
-        this.canvas.style.height = `${this.canvas.height}px`;
+        // Set canvas display size - use CSS to scale if needed
+        this.canvas.style.width = '100%';
+        this.canvas.style.height = 'auto';
+        this.canvas.style.maxWidth = `${this.canvas.width}px`;
+        this.canvas.style.maxHeight = `${this.canvas.height}px`;
 
         this.board = new Board(width, height);
         this.piece = new Piece();
