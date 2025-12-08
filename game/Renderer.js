@@ -175,6 +175,26 @@ export class Renderer {
         this.ctx.textAlign = 'start';
     }
 
+    drawQuitConfirmation() {
+        // Semi-transparent overlay
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+        
+        // Quit confirmation text
+        this.ctx.fillStyle = 'white';
+        this.ctx.textAlign = 'center';
+        this.ctx.font = '36px Arial';
+        this.ctx.fillText('Quit Game?', this.centerX, this.centerY - 30);
+        
+        this.ctx.font = '18px Arial';
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        this.ctx.fillText('Tap back button again to quit', this.centerX, this.centerY + 20);
+        this.ctx.fillText('Tap screen or press P to resume', this.centerX, this.centerY + 50);
+        
+        // Reset text alignment
+        this.ctx.textAlign = 'start';
+    }
+
     drawNextPiece(piece, colors) {
         // Early return if no next piece
         if (!piece.next) {

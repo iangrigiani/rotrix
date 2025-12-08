@@ -65,6 +65,7 @@ export class RotrixGame {
         this.dropSpeed = GAME_CONFIG.INITIAL_SPEED;
         this.gameOver = false;
         this.paused = false;
+        this.showingQuitConfirmation = false; // Track if showing quit confirmation dialog
         
         this.score = 0;
         this.level = 1;
@@ -305,6 +306,8 @@ export class RotrixGame {
     reset() {
         this.board.reset();
         this.gameOver = false;
+        this.paused = false;
+        this.showingQuitConfirmation = false;
         this.score = 0;
         this.level = 1;
         this.totalLines = 0;
@@ -334,7 +337,11 @@ export class RotrixGame {
             this.renderer.drawGameOver();
         }
         if (this.paused && !this.gameOver) {
-            this.renderer.drawPaused();
+            if (this.showingQuitConfirmation) {
+                this.renderer.drawQuitConfirmation();
+            } else {
+                this.renderer.drawPaused();
+            }
         }
     }
 
@@ -369,9 +376,39 @@ export class RotrixGame {
             console.log('[Game] Paused');
         } else {
             console.log('[Game] Resumed');
+            // Clear quit confirmation when resuming
+            this.showingQuitConfirmation = false;
             // Reset drop timer to prevent instant drop on resume
             this.lastDropTime = performance.now();
         }
+    }
+    
+    resumeFromQuitConfirmation() {
+        // Resume game and hide quit confirmation
+        if (this.paused && this.showingQuitConfirmation) {
+            this.showingQuitConfirmation = false;
+            this.paused = false;
+            this.lastDropTime = performance.now();
+            console.log('[Game] Resumed from quit confirmation');
+        }
+    }
+    
+    showQuitConfirmation() {
+        // Pause game and show quit confirmation
+        if (!this.paused && !this.gameOver) {
+            this.paused = true;
+            this.showingQuitConfirmation = true;
+            this.logger.log('GAME_PAUSED', {
+                paused: true,
+                reason: 'quit_confirmation'
+            });
+            console.log('[Game] Paused - Showing quit confirmation');
+        }
+    }
+    
+    hideQuitConfirmation() {
+        // Hide quit confirmation (but keep paused state)
+        this.showingQuitConfirmation = false;
     }
 
     updateScore(points) {
@@ -538,11 +575,37 @@ NOTES:
 }
 
 window.onload = () => {
+    // Initialize game immediately - don't wait for splash screen
     const game = new RotrixGame();
     
     // Hacer el juego y el logger accesibles globalmente para debugging
     window.rotrixGame = game;
     window.rotrixLogger = game.logger;
+    
+    // Add tap-to-resume when showing quit confirmation
+    const gameCanvas = document.getElementById('gameCanvas');
+    if (gameCanvas) {
+        const resumeHandler = () => {
+            if (game.showingQuitConfirmation) {
+                game.resumeFromQuitConfirmation();
+            }
+        };
+        gameCanvas.addEventListener('click', resumeHandler);
+        gameCanvas.addEventListener('touchstart', resumeHandler);
+    }
+    
+    // Hide splash screen after game is ready (only on native platforms)
+    // Let it show for a bit, then hide it when game is ready
+    if (window.isNative && window.SplashScreen) {
+        // Wait a moment for splash to be visible, then hide it
+        setTimeout(() => {
+            if (window.SplashScreen) {
+                window.SplashScreen.hide().catch(() => {
+                    // Ignore errors - splash will auto-hide anyway
+                });
+            }
+        }, 1500);
+    }
     
     // Comandos de debugging disponibles en la consola
     window.debugRotrix = {

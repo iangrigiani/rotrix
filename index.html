@@ -539,6 +539,35 @@
         </div>
     </div>
 
+    <!-- Back button handler - MUST be in non-module script to be available immediately -->
+    <script>
+        // Define back button handler immediately (before module scripts load)
+        window.handleBackButtonPress = function() {
+            if (window.rotrixGame && !window.rotrixGame.gameOver) {
+                if (window.rotrixGame.showingQuitConfirmation) {
+                    // Second press - exit app
+                    const exitApp = () => {
+                        if (window.CapacitorApp && typeof window.CapacitorApp.exitApp === 'function') {
+                            window.CapacitorApp.exitApp();
+                        } else if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
+                            window.Capacitor.Plugins.App.exitApp();
+                        }
+                    };
+                    exitApp();
+                    setTimeout(exitApp, 50);
+                } else {
+                    // First press - show quit confirmation
+                    window.rotrixGame.showQuitConfirmation();
+                }
+            } else {
+                // Game over or no game - exit app
+                if (window.CapacitorApp && typeof window.CapacitorApp.exitApp === 'function') {
+                    window.CapacitorApp.exitApp();
+                }
+            }
+        };
+    </script>
+
     <!-- Capacitor -->
     <script type="module">
         import { Capacitor } from '@capacitor/core';
@@ -551,17 +580,31 @@
         // Make Capacitor available globally
         window.Capacitor = Capacitor;
         window.isNative = Capacitor.isNativePlatform();
+        window.CapacitorApp = App;
+        
+        // Expose SplashScreen globally for use in rotrix.js
+        if (window.isNative) {
+            window.SplashScreen = SplashScreen;
+        }
         
         // Initialize native services
         if (window.isNative) {
+            // Also register with Capacitor's App plugin as backup
+            // (handleBackButtonPress is already defined above)
+            const handleBackButton = window.handleBackButtonPress;
+            
+            // Register back button listener with Capacitor as backup
+            App.addListener('backButton', handleBackButton).catch(() => {
+                // Silent fail - MainActivity handler is primary
+            });
+            
             initializeNativeServices().catch(console.error);
             
             // Configure status bar
             StatusBar.setStyle({ style: Style.Dark });
             StatusBar.setBackgroundColor({ color: '#1a1a1a' });
             
-            // Hide splash screen after app is ready
-            SplashScreen.hide();
+            // Splash screen will be hidden after game initializes (see rotrix.js)
             
             // Handle app state changes
             App.addListener('appStateChange', ({ isActive }) => {
@@ -579,15 +622,6 @@
                     }
                 }
             });
-            
-            // Handle back button (Android)
-            App.addListener('backButton', () => {
-                if (window.rotrixGame && !window.rotrixGame.gameOver) {
-                    window.rotrixGame.togglePause();
-                } else {
-                    App.exitApp();
-                }
-            });
         }
         
         // Show debug button only in development/web
@@ -600,6 +634,9 @@
         
         // Make HapticService available globally for game integration
         window.HapticService = HapticService;
+        
+        // Expose App globally
+        window.CapacitorApp = App;
     </script>
     
     <!-- Scripts principales -->

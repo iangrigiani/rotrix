@@ -27,7 +27,12 @@ export class Controls {
 
             // Pause toggle (works even when paused)
             if (e.key === 'p' || e.key === 'P') {
-                this.game.togglePause();
+                // If showing quit confirmation, resume from it
+                if (this.game.showingQuitConfirmation) {
+                    this.game.resumeFromQuitConfirmation();
+                } else {
+                    this.game.togglePause();
+                }
                 return;
             }
 
