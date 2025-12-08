@@ -77,6 +77,15 @@ export class RotrixGame {
         this.lastDropTime = 0;
         this.animationFrameId = null;
         
+        // Touch drag system for horizontal movement
+        this.touchStartX = null;
+        this.touchLastX = null;
+        this.touchStartTime = null;
+        this.isDragging = false;
+        this.dragVelocity = 0;
+        this.inertiaActive = false;
+        this.inertiaVelocity = 0;
+        
         // Gravity flipping system
         this.gravityDown = true; // true = pieces fall down, false = pieces fall up
         this.spawnCount = 0;
@@ -313,6 +322,13 @@ export class RotrixGame {
         this.totalLines = 0;
         this.dropSpeed = GAME_CONFIG.INITIAL_SPEED;
         this.lastDropTime = 0;
+        this.touchStartX = null;
+        this.touchLastX = null;
+        this.touchStartTime = null;
+        this.isDragging = false;
+        this.dragVelocity = 0;
+        this.inertiaActive = false;
+        this.inertiaVelocity = 0;
         this.gravityDown = true;
         this.spawnCount = 0;
         this.spawnsUntilFlip = this.generateSpawnsUntilFlip();
@@ -350,6 +366,24 @@ export class RotrixGame {
         
         // Skip game updates when paused or flipping gravity, but continue drawing
         if (!this.paused && !this.isFlippingGravity) {
+            // Handle inertia movement
+            if (this.inertiaActive && Math.abs(this.inertiaVelocity) > 0.05) {
+                const blockSize = this.blockSize;
+                const moveThreshold = blockSize * 0.3;
+                const accumulatedMovement = Math.abs(this.inertiaVelocity * 16); // ~16ms per frame
+                
+                if (accumulatedMovement >= moveThreshold) {
+                    const direction = this.inertiaVelocity > 0 ? 1 : -1;
+                    this.movePiece(direction, 0);
+                }
+                
+                // Apply friction to slow down inertia
+                this.inertiaVelocity *= 0.92; // Decay factor
+            } else {
+                this.inertiaActive = false;
+                this.inertiaVelocity = 0;
+            }
+            
             if (currentTime - this.lastDropTime >= this.dropSpeed) {
                 // Move in gravity direction
                 const gravityDy = this.gravityDown ? 1 : -1;
@@ -582,26 +616,125 @@ window.onload = () => {
     window.rotrixGame = game;
     window.rotrixLogger = game.logger;
     
-    // Add tap handlers for canvas
+    // Add touch/click handlers for canvas
     const gameCanvas = document.getElementById('gameCanvas');
     if (gameCanvas) {
         let touchHandled = false;
+        let touchStartTime = 0;
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let lastTouchX = 0;
+        let lastTouchTime = 0;
+        let hasMoved = false;
+        const TAP_THRESHOLD = 10; // pixels - if moved less than this, consider it a tap
+        const TAP_TIME_THRESHOLD = 200; // ms - if released within this time, consider it a tap
         
-        const canvasTapHandler = () => {
+        // Handle touch start
+        gameCanvas.addEventListener('touchstart', (e) => {
+            touchHandled = true;
+            const touch = e.touches[0];
+            touchStartX = touch.clientX;
+            touchStartY = touch.clientY;
+            lastTouchX = touchStartX;
+            touchStartTime = Date.now();
+            lastTouchTime = touchStartTime;
+            hasMoved = false;
+            
             if (game.showingQuitConfirmation) {
                 // Resume from quit confirmation
                 game.resumeFromQuitConfirmation();
-            } else if (!game.gameOver && !game.paused && !game.isFlippingGravity) {
-                // Rotate piece when tapping the board during gameplay
-                game.rotatePiece();
+                e.preventDefault();
+                return;
             }
-        };
+            
+            if (!game.gameOver && !game.paused && !game.isFlippingGravity) {
+                // Start drag tracking
+                game.touchStartX = touchStartX;
+                game.touchLastX = touchStartX;
+                game.touchStartTime = touchStartTime;
+                game.isDragging = true;
+                game.inertiaActive = false;
+                e.preventDefault();
+            }
+        }, { passive: false });
         
-        // Handle touch events (mobile)
-        gameCanvas.addEventListener('touchstart', (e) => {
-            touchHandled = true;
-            canvasTapHandler();
-            // Prevent click event from firing after touch
+        // Handle touch move
+        gameCanvas.addEventListener('touchmove', (e) => {
+            if (game.showingQuitConfirmation || game.gameOver || game.paused || game.isFlippingGravity) {
+                return;
+            }
+            
+            if (!game.isDragging) {
+                return;
+            }
+            
+            const touch = e.touches[0];
+            const currentX = touch.clientX;
+            const currentY = touch.clientY;
+            const currentTime = Date.now();
+            
+            // Check if finger has moved significantly
+            const deltaX = Math.abs(currentX - touchStartX);
+            const deltaY = Math.abs(currentY - touchStartY);
+            
+            if (deltaX > TAP_THRESHOLD || deltaY > TAP_THRESHOLD) {
+                hasMoved = true;
+            }
+            
+            // Only process horizontal movement
+            if (deltaX > 0) {
+                const horizontalDelta = currentX - game.touchLastX;
+                const blockSize = game.blockSize;
+                
+                // Move piece based on horizontal delta (in blocks)
+                if (Math.abs(horizontalDelta) >= blockSize * 0.3) {
+                    const direction = horizontalDelta > 0 ? 1 : -1;
+                    game.movePiece(direction, 0);
+                    game.touchLastX = currentX;
+                }
+                
+                // Calculate velocity for inertia
+                const timeDelta = currentTime - lastTouchTime;
+                if (timeDelta > 0) {
+                    const velocity = (currentX - lastTouchX) / timeDelta; // pixels per ms
+                    game.dragVelocity = velocity;
+                }
+                
+                lastTouchX = currentX;
+                lastTouchTime = currentTime;
+            }
+            
+            e.preventDefault();
+        }, { passive: false });
+        
+        // Handle touch end
+        gameCanvas.addEventListener('touchend', (e) => {
+            const touchEndTime = Date.now();
+            const touchDuration = touchEndTime - touchStartTime;
+            
+            if (game.showingQuitConfirmation) {
+                touchHandled = false;
+                return;
+            }
+            
+            if (game.isDragging) {
+                game.isDragging = false;
+                
+                // If it was a quick tap without movement, rotate piece
+                if (!hasMoved && touchDuration < TAP_TIME_THRESHOLD) {
+                    game.rotatePiece();
+                } else if (hasMoved && Math.abs(game.dragVelocity) > 0.1) {
+                    // Apply inertia based on velocity
+                    game.inertiaActive = true;
+                    game.inertiaVelocity = game.dragVelocity * 0.5; // Scale down velocity
+                }
+                
+                game.touchStartX = null;
+                game.touchLastX = null;
+                game.touchStartTime = null;
+            }
+            
+            touchHandled = false;
             e.preventDefault();
         }, { passive: false });
         
@@ -609,9 +742,13 @@ window.onload = () => {
         gameCanvas.addEventListener('click', (e) => {
             // Only handle click if touch wasn't already handled
             if (!touchHandled) {
-                canvasTapHandler();
+                if (game.showingQuitConfirmation) {
+                    game.resumeFromQuitConfirmation();
+                } else if (!game.gameOver && !game.paused && !game.isFlippingGravity) {
+                    game.rotatePiece();
+                }
             }
-            touchHandled = false; // Reset for next interaction
+            touchHandled = false;
         });
     }
     
