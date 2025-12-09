@@ -3,6 +3,7 @@ import { Piece } from './game/Piece.js';
 import { Controls } from './game/Controls.js';
 import { Renderer } from './game/Renderer.js';
 import { GameLogger } from './game/GameLogger.js';
+import { HighscoreManager } from './game/HighscoreManager.js';
 import { GAME_CONFIG } from './config/gameConfig.js';
 
 export class RotrixGame {
@@ -322,6 +323,12 @@ export class RotrixGame {
             window.HapticService.gameOver().catch(() => {});
         }
         
+        // Check if score qualifies for highscore
+        if (HighscoreManager.qualifiesForHighscore(this.score)) {
+            // Show name input dialog
+            this.showNameInputDialog();
+        }
+        
         //this.logger.logGameOver(this.score, this.level, this.logger.pieceCounter);
         
         if (this.animationFrameId) {
@@ -476,6 +483,13 @@ export class RotrixGame {
     hideQuitConfirmation() {
         // Hide quit confirmation (but keep paused state)
         this.showingQuitConfirmation = false;
+    }
+    
+    showNameInputDialog() {
+        // Show name input dialog for highscore
+        if (window.showNameInputDialog) {
+            window.showNameInputDialog(this.score, this.level);
+        }
     }
 
     updateScore(points) {

@@ -117,9 +117,9 @@
             width: 100%;
             max-width: 100%;
             height: auto;
-            /* Ensure canvas fits within viewport - account for header and buttons */
-            max-height: calc(100vh - 180px);
-            max-height: calc(100dvh - 180px); /* Dynamic viewport height */
+            /* Ensure canvas fits within viewport - account for header only */
+            max-height: calc(100vh - 80px);
+            max-height: calc(100dvh - 80px); /* Dynamic viewport height */
             object-fit: contain;
             flex-shrink: 1;
             flex-grow: 0;
@@ -145,57 +145,6 @@
         }
 
         /* Mobile touch controls */
-        .mobile-controls {
-            display: none;
-            width: 100%;
-            max-width: 500px;
-            margin-top: 8px;
-            padding: 0 10px;
-            padding-bottom: calc(10px + env(safe-area-inset-bottom) + 60px); /* Extra space for Android nav buttons */
-            flex-shrink: 0;
-        }
-
-        .control-row {
-            display: flex;
-            justify-content: center;
-            gap: 8px;
-            margin-bottom: 8px;
-        }
-        
-        .control-row:last-child {
-            margin-bottom: 0;
-        }
-
-        .control-button {
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            color: white;
-            font-size: 24px;
-            width: 60px;
-            height: 60px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            user-select: none;
-            -webkit-user-select: none;
-            touch-action: manipulation;
-            transition: all 0.1s;
-        }
-
-        .control-button:active {
-            background: rgba(255, 255, 255, 0.2);
-            transform: scale(0.95);
-        }
-
-        .control-button.wide {
-            width: 130px;
-        }
-
-        .control-button.rotate {
-            font-size: 20px;
-        }
 
         /* Main Menu Styles */
         .main-menu {
@@ -260,6 +209,192 @@
 
         .game-container.hidden {
             display: none;
+        }
+
+        /* Name Input Dialog */
+        .name-input-dialog {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .name-input-dialog.hidden {
+            display: none;
+        }
+
+        .name-input-content {
+            background: #1a1a1a;
+            border: 2px solid #444;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .name-input-content h2 {
+            color: #FFD700;
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+
+        .name-input-content p {
+            color: white;
+            margin-bottom: 20px;
+            font-size: 16px;
+        }
+
+        .name-input-content input {
+            width: 100%;
+            padding: 12px;
+            font-size: 18px;
+            background: #000;
+            border: 2px solid #444;
+            border-radius: 8px;
+            color: white;
+            text-align: center;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+        }
+
+        .name-input-content input:focus {
+            outline: none;
+            border-color: #FFD700;
+        }
+
+        .name-input-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .name-input-button {
+            padding: 12px 24px;
+            font-size: 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid #444;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .name-input-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: #FFD700;
+        }
+
+        .name-input-button.primary {
+            background: rgba(255, 215, 0, 0.2);
+            border-color: #FFD700;
+            color: #FFD700;
+        }
+
+        /* Highscores Screen */
+        .highscores-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 500px;
+            height: 100vh;
+            height: 100dvh;
+            padding: 20px;
+            padding-bottom: calc(80px + env(safe-area-inset-bottom));
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        .highscores-screen.hidden {
+            display: none;
+        }
+
+        .highscores-title {
+            font-size: 36px;
+            font-weight: bold;
+            color: #FFD700;
+            margin-bottom: 30px;
+            margin-top: 20px;
+            flex-shrink: 0;
+        }
+
+        .highscores-list {
+            width: 100%;
+            max-width: 400px;
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            min-height: 0;
+        }
+
+        .highscore-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .highscore-rank {
+            font-size: 24px;
+            font-weight: bold;
+            color: #FFD700;
+            width: 40px;
+            text-align: center;
+        }
+
+        .highscore-info {
+            flex: 1;
+            margin-left: 15px;
+        }
+
+        .highscore-name {
+            font-size: 18px;
+            color: white;
+            margin-bottom: 5px;
+        }
+
+        .highscore-details {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .highscore-score {
+            font-size: 20px;
+            font-weight: bold;
+            color: #FFD700;
+        }
+
+        .highscores-back-button {
+            margin-top: auto;
+            margin-bottom: 20px;
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid #444;
+            border-radius: 8px;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-shrink: 0;
+            width: 200px;
+        }
+
+        .highscores-back-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: #FFD700;
         }
 
         /* 🔧 Estilos para debugging */
@@ -358,18 +493,12 @@
             }
             
             canvas {
-                max-height: calc(100dvh - 140px);
+                max-height: calc(100dvh - 60px);
             }
             
             .controls {
                 margin-top: 4px;
                 padding: 0 8px;
-            }
-            
-            .mobile-controls {
-                margin-top: 2px;
-                padding: 0 8px;
-                padding-bottom: calc(8px + env(safe-area-inset-bottom) + 30px); /* Reduced space, moved up */
             }
             
             .game-container {
@@ -382,11 +511,6 @@
                 margin-top: 10px;
             }
 
-            .mobile-controls {
-                display: block;
-                margin-top: 2px;
-                padding-bottom: calc(8px + env(safe-area-inset-bottom) + 30px); /* Reduced space, moved up */
-            }
 
             .debug-panel {
                 position: fixed;
@@ -415,7 +539,15 @@
             }
             
             canvas {
-                max-height: calc(100vh - 200px);
+                max-height: calc(100vh - 60px);
+            }
+
+            .highscores-screen {
+                padding-bottom: calc(100px + env(safe-area-inset-bottom));
+            }
+
+            .highscores-back-button {
+                margin-bottom: calc(20px + env(safe-area-inset-bottom));
             }
         }
 
@@ -451,7 +583,7 @@
             }
             
             canvas {
-                max-height: calc(100dvh - 130px);
+                max-height: calc(100dvh - 60px);
             }
             
             .game-header {
@@ -482,15 +614,17 @@
                 padding: 0 5px;
             }
             
-            .mobile-controls {
-                margin-top: 2px;
-                padding: 0 5px;
-                padding-bottom: calc(5px + env(safe-area-inset-bottom) + 30px); /* Reduced space, moved up */
-            }
-            
             .game-container {
                 padding-top: max(-30px, env(safe-area-inset-top) - 30px); /* Move up by 30px */
                 padding-bottom: max(30px, env(safe-area-inset-bottom) + 30px); /* Reduced bottom padding */
+            }
+
+            .highscores-screen {
+                padding-bottom: calc(100px + env(safe-area-inset-bottom));
+            }
+
+            .highscores-back-button {
+                margin-bottom: calc(20px + env(safe-area-inset-bottom));
             }
         }
 
@@ -526,12 +660,9 @@
 
             canvas {
                 max-width: calc(100vh - 100px);
-                max-height: calc(100vh - 50px);
+                max-height: calc(100vh - 60px);
             }
 
-            .mobile-controls {
-                display: none;
-            }
         }
 
         /* Reduce repaints for frequently changing elements */
@@ -578,6 +709,28 @@
         <button class="menu-button" id="quitButton">Quit</button>
     </div>
 
+    <!-- Name Input Dialog -->
+    <div class="name-input-dialog hidden" id="nameInputDialog">
+        <div class="name-input-content">
+            <h2>New Highscore!</h2>
+            <p id="nameInputScore">Score: 0</p>
+            <input type="text" id="nameInput" placeholder="Enter your name" maxlength="20" autofocus>
+            <div class="name-input-buttons">
+                <button class="name-input-button primary" id="nameInputSubmit">Save</button>
+                <button class="name-input-button" id="nameInputCancel">Skip</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Highscores Screen -->
+    <div class="highscores-screen hidden" id="highscoresScreen">
+        <div class="highscores-title">HIGHSCORES</div>
+        <div class="highscores-list" id="highscoresList">
+            <!-- Highscores will be populated here -->
+        </div>
+        <button class="highscores-back-button" id="highscoresBackButton">Back</button>
+    </div>
+
     <div class="game-container hidden" id="gameContainer">
         <div class="game-header">
             <div class="game-info">
@@ -598,19 +751,6 @@
         </div>
         <canvas id="gameCanvas"></canvas>
         
-        <!-- Mobile touch controls -->
-        <div class="mobile-controls">
-            <div class="control-row">
-                <button class="control-button wide" id="dropBtn">⬇⬇</button>
-                <button class="control-button" id="downBtn">↓</button>
-                <button class="control-button" id="gravityBtn">⌫</button>
-            </div>
-            <div class="control-row">
-                <button class="control-button" id="leftBtn">←</button>
-                <button class="control-button rotate" id="rotateBtn">↻</button>
-                <button class="control-button" id="rightBtn">→</button>
-            </div>
-        </div>
     </div>
 
     <!-- Back button handler - MUST be in non-module script to be available immediately -->
@@ -833,15 +973,84 @@
         window.showMainMenu = function() {
             const menu = document.getElementById('mainMenu');
             const game = document.getElementById('gameContainer');
+            const highscores = document.getElementById('highscoresScreen');
             if (menu) menu.classList.remove('hidden');
             if (game) game.classList.add('hidden');
+            if (highscores) highscores.classList.add('hidden');
         };
         
         window.hideMainMenu = function() {
             const menu = document.getElementById('mainMenu');
             const game = document.getElementById('gameContainer');
+            const highscores = document.getElementById('highscoresScreen');
             if (menu) menu.classList.add('hidden');
             if (game) game.classList.remove('hidden');
+            if (highscores) highscores.classList.add('hidden');
+        };
+        
+        // Highscores functions
+        window.showHighscores = function() {
+            const menu = document.getElementById('mainMenu');
+            const game = document.getElementById('gameContainer');
+            const highscores = document.getElementById('highscoresScreen');
+            if (menu) menu.classList.add('hidden');
+            if (game) game.classList.add('hidden');
+            if (highscores) {
+                highscores.classList.remove('hidden');
+                renderHighscores();
+            }
+        };
+        
+        function renderHighscores() {
+            const list = document.getElementById('highscoresList');
+            if (!list) return;
+            
+            // Import HighscoreManager dynamically
+            import('./game/HighscoreManager.js').then(({ HighscoreManager }) => {
+                const highscores = HighscoreManager.getHighscores();
+                
+                if (highscores.length === 0) {
+                    list.innerHTML = '<div style="text-align: center; color: rgba(255,255,255,0.5); padding: 40px;">No highscores yet. Play to set your first highscore!</div>';
+                    return;
+                }
+                
+                list.innerHTML = highscores.map((hs, index) => {
+                    const rank = index + 1;
+                    const date = new Date(hs.date);
+                    const dateStr = date.toLocaleDateString();
+                    return `
+                        <div class="highscore-item">
+                            <div class="highscore-rank">${rank}</div>
+                            <div class="highscore-info">
+                                <div class="highscore-name">${hs.name}</div>
+                                <div class="highscore-details">Level ${hs.level} • ${dateStr}</div>
+                            </div>
+                            <div class="highscore-score">${hs.score.toLocaleString()}</div>
+                        </div>
+                    `;
+                }).join('');
+            }).catch(() => {
+                list.innerHTML = '<div style="text-align: center; color: rgba(255,255,255,0.5); padding: 40px;">Error loading highscores</div>';
+            });
+        }
+        
+        // Name input dialog functions
+        window.showNameInputDialog = function(score, level) {
+            const dialog = document.getElementById('nameInputDialog');
+            const scoreText = document.getElementById('nameInputScore');
+            const input = document.getElementById('nameInput');
+            
+            if (!dialog || !scoreText || !input) return;
+            
+            scoreText.textContent = `Score: ${score.toLocaleString()} • Level: ${level}`;
+            input.value = '';
+            dialog.classList.remove('hidden');
+            setTimeout(() => input.focus(), 100);
+        };
+        
+        window.hideNameInputDialog = function() {
+            const dialog = document.getElementById('nameInputDialog');
+            if (dialog) dialog.classList.add('hidden');
         };
         
         // Menu button handlers
@@ -870,8 +1079,60 @@
             
             if (highscoresButton) {
                 highscoresButton.addEventListener('click', () => {
-                    // TODO: Show highscores
-                    console.log('Highscores clicked');
+                    showHighscores();
+                });
+            }
+            
+            // Highscores back button
+            const highscoresBackButton = document.getElementById('highscoresBackButton');
+            if (highscoresBackButton) {
+                highscoresBackButton.addEventListener('click', () => {
+                    showMainMenu();
+                });
+            }
+            
+            // Name input dialog handlers
+            const nameInputSubmit = document.getElementById('nameInputSubmit');
+            const nameInputCancel = document.getElementById('nameInputCancel');
+            const nameInput = document.getElementById('nameInput');
+            
+            if (nameInputSubmit) {
+                nameInputSubmit.addEventListener('click', () => {
+                    saveHighscore();
+                });
+            }
+            
+            if (nameInputCancel) {
+                nameInputCancel.addEventListener('click', () => {
+                    hideNameInputDialog();
+                });
+            }
+            
+            if (nameInput) {
+                nameInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        saveHighscore();
+                    }
+                });
+            }
+            
+            function saveHighscore() {
+                const input = document.getElementById('nameInput');
+                if (!input || !window.rotrixGame) return;
+                
+                const name = input.value.trim();
+                if (name.length === 0) {
+                    alert('Please enter your name');
+                    return;
+                }
+                
+                // Import HighscoreManager and save
+                import('./game/HighscoreManager.js').then(({ HighscoreManager }) => {
+                    HighscoreManager.addHighscore(name, window.rotrixGame.score, window.rotrixGame.level);
+                    hideNameInputDialog();
+                }).catch((error) => {
+                    console.error('Error saving highscore:', error);
+                    hideNameInputDialog();
                 });
             }
             
@@ -976,101 +1237,6 @@
             }
         });
 
-        // Update mobile control button symbols based on gravity direction
-        function updateGravityButtons() {
-            const dropBtn = document.getElementById('dropBtn');
-            const downBtn = document.getElementById('downBtn');
-            
-            if (!dropBtn || !downBtn || !window.rotrixGame) return;
-            
-            if (window.rotrixGame.gravityDown) {
-                // Gravity is DOWN: show down arrows
-                dropBtn.textContent = '⬇⬇';
-                downBtn.textContent = '↓';
-            } else {
-                // Gravity is UP: show up arrows
-                dropBtn.textContent = '⬆⬆';
-                downBtn.textContent = '↑';
-            }
-        }
-
-        // Mobile touch controls
-        function setupMobileControls() {
-            const leftBtn = document.getElementById('leftBtn');
-            const rightBtn = document.getElementById('rightBtn');
-            const rotateBtn = document.getElementById('rotateBtn');
-            const dropBtn = document.getElementById('dropBtn');
-            const downBtn = document.getElementById('downBtn');
-            const gravityBtn = document.getElementById('gravityBtn');
-
-            if (!leftBtn || !window.rotrixGame) return;
-
-            // Update button symbols based on initial gravity
-            updateGravityButtons();
-
-            function handleButton(action) {
-                return (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (window.rotrixGame && !window.rotrixGame.gameOver && !window.rotrixGame.paused) {
-                        action();
-                    }
-                };
-            }
-
-            leftBtn.addEventListener('touchstart', handleButton(() => {
-                window.rotrixGame.movePiece(-1, 0);
-                if (window.HapticService) window.HapticService.buttonPress().catch(() => {});
-            }));
-            rightBtn.addEventListener('touchstart', handleButton(() => {
-                window.rotrixGame.movePiece(1, 0);
-                if (window.HapticService) window.HapticService.buttonPress().catch(() => {});
-            }));
-            rotateBtn.addEventListener('touchstart', handleButton(() => {
-                window.rotrixGame.rotatePiece();
-                if (window.HapticService) window.HapticService.buttonPress().catch(() => {});
-            }));
-            dropBtn.addEventListener('touchstart', handleButton(() => {
-                window.rotrixGame.hardDrop();
-                if (window.HapticService) window.HapticService.buttonPress().catch(() => {});
-            }));
-            downBtn.addEventListener('touchstart', handleButton(() => {
-                const dy = window.rotrixGame.gravityDown ? 1 : -1;
-                window.rotrixGame.movePiece(0, dy);
-                if (window.HapticService) window.HapticService.buttonPress().catch(() => {});
-            }));
-            gravityBtn.addEventListener('touchstart', handleButton(() => {
-                window.rotrixGame.forceGravityFlip().then(() => {
-                    // Update buttons after gravity changes
-                    updateGravityButtons();
-                });
-                if (window.HapticService) window.HapticService.buttonPress().catch(() => {});
-            }));
-
-            // Prevent default touch behaviors
-            [leftBtn, rightBtn, rotateBtn, dropBtn, downBtn, gravityBtn].forEach(btn => {
-                btn.addEventListener('touchend', (e) => e.preventDefault());
-                btn.addEventListener('touchcancel', (e) => e.preventDefault());
-            });
-        }
-
-        // Make updateGravityButtons globally accessible
-        window.updateGravityButtons = updateGravityButtons;
-
-        // Setup mobile controls after game loads
-        window.addEventListener('load', () => {
-            setTimeout(() => {
-                setupMobileControls();
-                // Hook into gravity changes to update buttons
-                if (window.rotrixGame) {
-                    const originalFlipGravity = window.rotrixGame.flipGravity.bind(window.rotrixGame);
-                    window.rotrixGame.flipGravity = async function() {
-                        await originalFlipGravity();
-                        updateGravityButtons();
-                    };
-                }
-            }, 500);
-        });
     </script>
 </body>
 </html> 
