@@ -646,10 +646,62 @@
 
     <!-- Capacitor -->
     <script type="module">
-        import { Capacitor } from '@capacitor/core';
-        import { App } from '@capacitor/app';
-        import { StatusBar, Style } from '@capacitor/status-bar';
-        import { SplashScreen } from '@capacitor/splash-screen';
+        // Capacitor modules are available through the Capacitor runtime in native apps
+        // For web/development, we'll handle errors gracefully
+        let Capacitor, App, StatusBar, Style, SplashScreen;
+        
+        try {
+            // Try to import Capacitor modules
+            // In native apps, these are resolved by Capacitor's runtime
+            // In web, they may not be available
+            const capacitorModule = await import('@capacitor/core').catch(() => null);
+            if (capacitorModule && capacitorModule.Capacitor) {
+                Capacitor = capacitorModule.Capacitor;
+                
+                const appModule = await import('@capacitor/app').catch(() => null);
+                if (appModule) App = appModule.App;
+                
+                const statusBarModule = await import('@capacitor/status-bar').catch(() => null);
+                if (statusBarModule) {
+                    StatusBar = statusBarModule.StatusBar;
+                    Style = statusBarModule.Style;
+                }
+                
+                const splashModule = await import('@capacitor/splash-screen').catch(() => null);
+                if (splashModule) SplashScreen = splashModule.SplashScreen;
+            }
+        } catch (error) {
+            // Silently handle - modules may not be available in all environments
+            console.debug('Capacitor modules not available (this is normal in some environments)');
+        }
+        
+        // Provide fallbacks if modules weren't loaded
+        if (!Capacitor) {
+            Capacitor = {
+                isNativePlatform: () => false,
+                getPlatform: () => 'web'
+            };
+        }
+        if (!App) {
+            App = {
+                exitApp: () => {},
+                addListener: () => Promise.resolve({ remove: () => {} })
+            };
+        }
+        if (!StatusBar) {
+            StatusBar = {
+                setStyle: () => Promise.resolve(),
+                setBackgroundColor: () => Promise.resolve()
+            };
+            Style = { Dark: 'DARK', Light: 'LIGHT' };
+        }
+        if (!SplashScreen) {
+            SplashScreen = {
+                show: () => Promise.resolve(),
+                hide: () => Promise.resolve()
+            };
+        }
+        
         import { initializeNativeServices } from './src/native/index.js';
         import { HapticService } from './src/native/haptics.js';
         

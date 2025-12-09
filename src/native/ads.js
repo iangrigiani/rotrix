@@ -1,4 +1,21 @@
-import { AdMob } from '@capacitor-community/admob';
+// Dynamically import Capacitor AdMob to avoid module resolution errors
+let AdMob;
+
+// Lazy load AdMob module
+async function loadAdMob() {
+  if (!AdMob) {
+    try {
+      const admobModule = await import('@capacitor-community/admob').catch(() => null);
+      if (admobModule) {
+        AdMob = admobModule.AdMob;
+      }
+    } catch (error) {
+      // Silently fail if AdMob not available
+      console.debug('AdMob module not available');
+    }
+  }
+  return AdMob;
+}
 
 /**
  * AdMob wrapper for displaying ads
@@ -14,13 +31,16 @@ export class AdService {
     if (this.initialized) return;
 
     try {
-      await AdMob.initialize({
-        requestTrackingAuthorization: true,
-        testingDevices: [],
-        initializeForTesting: false
-      });
-      this.initialized = true;
-      console.log('AdMob initialized');
+      const AdMobInstance = await loadAdMob();
+      if (AdMobInstance) {
+        await AdMobInstance.initialize({
+          requestTrackingAuthorization: true,
+          testingDevices: [],
+          initializeForTesting: false
+        });
+        this.initialized = true;
+        console.log('AdMob initialized');
+      }
     } catch (error) {
       console.error('Failed to initialize AdMob:', error);
     }
@@ -32,6 +52,8 @@ export class AdService {
   static async showBanner() {
     try {
       await this.initialize();
+      const AdMobInstance = await loadAdMob();
+      if (!AdMobInstance) return;
       
       const options = {
         adId: 'ca-app-pub-3940256099942544/6300978111', // Test banner ID
@@ -41,7 +63,7 @@ export class AdService {
         isTesting: true // Set to false in production
       };
 
-      await AdMob.showBanner(options);
+      await AdMobInstance.showBanner(options);
       console.log('Banner ad shown');
     } catch (error) {
       console.error('Failed to show banner ad:', error);
@@ -53,7 +75,10 @@ export class AdService {
    */
   static async hideBanner() {
     try {
-      await AdMob.hideBanner();
+      const AdMobInstance = await loadAdMob();
+      if (AdMobInstance) {
+        await AdMobInstance.hideBanner();
+      }
     } catch (error) {
       console.error('Failed to hide banner ad:', error);
     }
@@ -65,14 +90,16 @@ export class AdService {
   static async showInterstitial() {
     try {
       await this.initialize();
+      const AdMobInstance = await loadAdMob();
+      if (!AdMobInstance) return;
       
       const options = {
         adId: 'ca-app-pub-3940256099942544/1033173712', // Test interstitial ID
         isTesting: true // Set to false in production
       };
 
-      await AdMob.prepareInterstitial(options);
-      await AdMob.showInterstitial();
+      await AdMobInstance.prepareInterstitial(options);
+      await AdMobInstance.showInterstitial();
       console.log('Interstitial ad shown');
     } catch (error) {
       console.error('Failed to show interstitial ad:', error);
@@ -85,14 +112,16 @@ export class AdService {
   static async showRewarded() {
     try {
       await this.initialize();
+      const AdMobInstance = await loadAdMob();
+      if (!AdMobInstance) return { success: false };
       
       const options = {
         adId: 'ca-app-pub-3940256099942544/5224354917', // Test rewarded ID
         isTesting: true // Set to false in production
       };
 
-      await AdMob.prepareRewardVideoAd(options);
-      const result = await AdMob.showRewardVideoAd();
+      await AdMobInstance.prepareRewardVideoAd(options);
+      const result = await AdMobInstance.showRewardVideoAd();
       
       if (result.rewarded) {
         console.log('User watched rewarded ad, reward:', result.reward);

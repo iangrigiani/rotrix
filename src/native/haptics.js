@@ -1,4 +1,22 @@
-import { Haptics, ImpactStyle } from '@capacitor/haptics';
+// Dynamically import Capacitor Haptics to avoid module resolution errors
+let Haptics, ImpactStyle;
+
+// Lazy load haptics module
+async function loadHaptics() {
+  if (!Haptics) {
+    try {
+      const hapticsModule = await import('@capacitor/haptics').catch(() => null);
+      if (hapticsModule) {
+        Haptics = hapticsModule.Haptics;
+        ImpactStyle = hapticsModule.ImpactStyle;
+      }
+    } catch (error) {
+      // Silently fail if haptics not available
+      console.debug('Haptics module not available');
+    }
+  }
+  return { Haptics, ImpactStyle };
+}
 
 /**
  * Haptic feedback wrapper for mobile devices
@@ -9,7 +27,10 @@ export class HapticService {
    */
   static async light() {
     try {
-      await Haptics.impact({ style: ImpactStyle.Light });
+      const { Haptics: H, ImpactStyle: IS } = await loadHaptics();
+      if (H && IS) {
+        await H.impact({ style: IS.Light });
+      }
     } catch (error) {
       // Silently fail if haptics not available (web, etc.)
       console.debug('Haptics not available:', error);
@@ -21,7 +42,10 @@ export class HapticService {
    */
   static async medium() {
     try {
-      await Haptics.impact({ style: ImpactStyle.Medium });
+      const { Haptics: H, ImpactStyle: IS } = await loadHaptics();
+      if (H && IS) {
+        await H.impact({ style: IS.Medium });
+      }
     } catch (error) {
       console.debug('Haptics not available:', error);
     }
@@ -32,7 +56,10 @@ export class HapticService {
    */
   static async heavy() {
     try {
-      await Haptics.impact({ style: ImpactStyle.Heavy });
+      const { Haptics: H, ImpactStyle: IS } = await loadHaptics();
+      if (H && IS) {
+        await H.impact({ style: IS.Heavy });
+      }
     } catch (error) {
       console.debug('Haptics not available:', error);
     }
@@ -71,7 +98,10 @@ export class HapticService {
    */
   static async gameOver() {
     try {
-      await Haptics.vibrate({ duration: 500 });
+      const { Haptics: H } = await loadHaptics();
+      if (H) {
+        await H.vibrate({ duration: 500 });
+      }
     } catch (error) {
       console.debug('Haptics not available:', error);
     }
