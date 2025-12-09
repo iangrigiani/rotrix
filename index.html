@@ -197,6 +197,71 @@
             font-size: 20px;
         }
 
+        /* Main Menu Styles */
+        .main-menu {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            max-width: 500px;
+            height: 100vh;
+            height: 100dvh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .main-menu.hidden {
+            display: none;
+        }
+
+        .menu-title {
+            font-size: 48px;
+            font-weight: bold;
+            color: #FFD700;
+            margin-bottom: 60px;
+            text-align: center;
+        }
+
+        .menu-button {
+            width: 200px;
+            padding: 16px 24px;
+            margin: 12px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid #444;
+            border-radius: 8px;
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+        }
+
+        .menu-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: #FFD700;
+        }
+
+        .menu-button:active {
+            background: rgba(255, 255, 255, 0.15);
+            transform: scale(0.98);
+        }
+
+        .menu-button.primary {
+            background: rgba(255, 215, 0, 0.2);
+            border-color: #FFD700;
+            color: #FFD700;
+        }
+
+        .menu-button.primary:hover {
+            background: rgba(255, 215, 0, 0.3);
+        }
+
+        .game-container.hidden {
+            display: none;
+        }
+
         /* 🔧 Estilos para debugging */
         .debug-panel {
             position: fixed;
@@ -504,7 +569,16 @@
         </div>
     </div>
 
-    <div class="game-container">
+    <!-- Main Menu -->
+    <div class="main-menu" id="mainMenu">
+        <div class="menu-title">ROTRIX</div>
+        <button class="menu-button primary" id="playButton">Play!</button>
+        <button class="menu-button" id="optionsButton">Options</button>
+        <button class="menu-button" id="highscoresButton">Highscores</button>
+        <button class="menu-button" id="quitButton">Quit</button>
+    </div>
+
+    <div class="game-container hidden" id="gameContainer">
         <div class="game-header">
             <div class="game-info">
                 <div class="score">
@@ -639,6 +713,62 @@
         
         // Expose App globally
         window.CapacitorApp = App;
+    </script>
+    
+    <!-- Main Menu Script -->
+    <script>
+        // Menu state management
+        window.showMainMenu = function() {
+            document.getElementById('mainMenu').classList.remove('hidden');
+            document.getElementById('gameContainer').classList.add('hidden');
+        };
+        
+        window.hideMainMenu = function() {
+            document.getElementById('mainMenu').classList.add('hidden');
+            document.getElementById('gameContainer').classList.remove('hidden');
+        };
+        
+        // Menu button handlers
+        document.addEventListener('DOMContentLoaded', () => {
+            const playButton = document.getElementById('playButton');
+            const optionsButton = document.getElementById('optionsButton');
+            const highscoresButton = document.getElementById('highscoresButton');
+            const quitButton = document.getElementById('quitButton');
+            
+            if (playButton) {
+                playButton.addEventListener('click', () => {
+                    hideMainMenu();
+                    // Start the game if it hasn't started yet
+                    if (window.rotrixGame && !window.rotrixGame.gameStarted) {
+                        window.rotrixGame.start();
+                    }
+                });
+            }
+            
+            if (optionsButton) {
+                optionsButton.addEventListener('click', () => {
+                    // TODO: Show options menu
+                    console.log('Options clicked');
+                });
+            }
+            
+            if (highscoresButton) {
+                highscoresButton.addEventListener('click', () => {
+                    // TODO: Show highscores
+                    console.log('Highscores clicked');
+                });
+            }
+            
+            if (quitButton) {
+                quitButton.addEventListener('click', () => {
+                    if (window.CapacitorApp && typeof window.CapacitorApp.exitApp === 'function') {
+                        window.CapacitorApp.exitApp();
+                    } else if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
+                        window.Capacitor.Plugins.App.exitApp();
+                    }
+                });
+            }
+        });
     </script>
     
     <!-- Scripts principales -->

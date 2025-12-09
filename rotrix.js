@@ -88,6 +88,7 @@ export class RotrixGame {
         this.dragVelocityY = 0;
         this.inertiaActive = false;
         this.inertiaVelocity = 0;
+        this.dragStartPieceX = null; // Store piece X position when drag starts
         
         // Gravity flipping system
         this.gravityDown = true; // true = pieces fall down, false = pieces fall up
@@ -130,7 +131,8 @@ export class RotrixGame {
 
     init() {
         this.spawnPiece();
-        this.gameLoop();
+        // Don't start game loop automatically - wait for Play button
+        this.gameStarted = false;
     }
 
     spawnPiece() {
@@ -271,6 +273,20 @@ export class RotrixGame {
             return;
         }
 
+        // Restore piece to original horizontal position when drag started (if available)
+        if (this.dragStartPieceX !== null) {
+            const targetX = this.dragStartPieceX;
+            const currentX = this.piece.position.x;
+            if (currentX !== targetX) {
+                // Move piece horizontally to original position
+                const dx = targetX - currentX;
+                const testPos = { ...this.piece.position, x: targetX };
+                if (!this.board.checkCollision(this.piece, testPos, this.gravityDown)) {
+                    this.piece.position.x = targetX;
+                }
+            }
+        }
+
         // Find the furthest valid position in gravity direction
         let currentPos = { ...this.piece.position };
         const gravityDy = this.gravityDown ? 1 : -1;
@@ -335,6 +351,7 @@ export class RotrixGame {
         this.dragVelocityY = 0;
         this.inertiaActive = false;
         this.inertiaVelocity = 0;
+        this.dragStartPieceX = null;
         this.gravityDown = true;
         this.spawnCount = 0;
         this.spawnsUntilFlip = this.generateSpawnsUntilFlip();
@@ -344,7 +361,10 @@ export class RotrixGame {
         this.levelDisplay.textContent = this.level;
         this.spawnPiece();
         this.draw();
-        this.gameLoop();
+        // Only start game loop if game was already started
+        if (this.gameStarted) {
+            this.gameLoop();
+        }
     }
 
     draw() {
@@ -367,8 +387,15 @@ export class RotrixGame {
         }
     }
 
+    start() {
+        if (!this.gameStarted) {
+            this.gameStarted = true;
+            this.gameLoop();
+        }
+    }
+    
     gameLoop(currentTime = 0) {
-        if (this.gameOver) return;
+        if (this.gameOver || !this.gameStarted) return;
         
         // Skip game updates when paused or flipping gravity, but continue drawing
         if (!this.paused && !this.isFlippingGravity) {
@@ -669,6 +696,10 @@ window.onload = () => {
                 game.isDragging = true;
                 game.inertiaActive = false;
                 game.dragVelocityY = 0;
+                // Store piece's horizontal position when drag starts
+                if (game.piece && game.piece.current) {
+                    game.dragStartPieceX = game.piece.position.x;
+                }
                 e.preventDefault();
             }
         }, { passive: false });
@@ -803,6 +834,7 @@ window.onload = () => {
                 game.touchLastY = null;
                 game.touchStartTime = null;
                 game.dragVelocityY = 0;
+                game.dragStartPieceX = null;
             }
             
             touchHandled = false;
