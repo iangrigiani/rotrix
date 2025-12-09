@@ -857,18 +857,44 @@ window.onload = () => {
         });
     }
     
+    // Handle splash screen and show main menu
+    function showMenuAfterSplash() {
+        if (window.showMainMenu) {
+            window.showMainMenu();
+        } else {
+            // Fallback if function not available yet
+            const menu = document.getElementById('mainMenu');
+            const game = document.getElementById('gameContainer');
+            if (menu) menu.classList.remove('hidden');
+            if (game) game.classList.add('hidden');
+        }
+    }
+    
     // Hide splash screen after game is ready (only on native platforms)
     // Let it show for a bit, then hide it when game is ready
     if (window.isNative && window.SplashScreen) {
-        // Wait a moment for splash to be visible, then hide it
+        // Wait a moment for splash to be visible, then hide it and show main menu
         setTimeout(() => {
             if (window.SplashScreen) {
                 window.SplashScreen.hide().catch(() => {
                     // Ignore errors - splash will auto-hide anyway
                 });
             }
-        }, 1500);
+            // Show main menu after splash is hidden
+            showMenuAfterSplash();
+        }, 2500); // Show splash for at least 2.5 seconds
+    } else {
+        // On web/non-native, show menu after a short delay
+        setTimeout(showMenuAfterSplash, 500);
     }
+    
+    // Fallback: ensure menu shows even if splash screen logic fails
+    setTimeout(() => {
+        const menu = document.getElementById('mainMenu');
+        if (menu && menu.classList.contains('hidden')) {
+            showMenuAfterSplash();
+        }
+    }, 3500);
     
     // Comandos de debugging disponibles en la consola
     window.debugRotrix = {

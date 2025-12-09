@@ -570,7 +570,7 @@
     </div>
 
     <!-- Main Menu -->
-    <div class="main-menu" id="mainMenu">
+    <div class="main-menu hidden" id="mainMenu">
         <div class="menu-title">ROTRIX</div>
         <button class="menu-button primary" id="playButton">Play!</button>
         <button class="menu-button" id="optionsButton">Options</button>
@@ -661,6 +661,13 @@
         // Expose SplashScreen globally for use in rotrix.js
         if (window.isNative) {
             window.SplashScreen = SplashScreen;
+            // Ensure splash screen shows
+            SplashScreen.show({
+                showDuration: 3000,
+                autoHide: false
+            }).catch(() => {
+                // Ignore errors
+            });
         }
         
         // Initialize native services
@@ -717,15 +724,19 @@
     
     <!-- Main Menu Script -->
     <script>
-        // Menu state management
+        // Menu state management - define immediately
         window.showMainMenu = function() {
-            document.getElementById('mainMenu').classList.remove('hidden');
-            document.getElementById('gameContainer').classList.add('hidden');
+            const menu = document.getElementById('mainMenu');
+            const game = document.getElementById('gameContainer');
+            if (menu) menu.classList.remove('hidden');
+            if (game) game.classList.add('hidden');
         };
         
         window.hideMainMenu = function() {
-            document.getElementById('mainMenu').classList.add('hidden');
-            document.getElementById('gameContainer').classList.remove('hidden');
+            const menu = document.getElementById('mainMenu');
+            const game = document.getElementById('gameContainer');
+            if (menu) menu.classList.add('hidden');
+            if (game) game.classList.remove('hidden');
         };
         
         // Menu button handlers

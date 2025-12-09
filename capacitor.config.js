@@ -7,11 +7,11 @@ const config = {
   },
   plugins: {
     SplashScreen: {
-      launchShowDuration: 2000,
-      launchAutoHide: true, // Auto-hide after duration, but we'll also hide manually when ready
+      launchShowDuration: 3000,
+      launchAutoHide: true, // Auto-hide after duration, but we'll also hide manually
       backgroundColor: '#1a1a1a',
       androidSplashResourceName: 'splash',
-      androidScaleType: 'CENTER_CROP',
+      androidScaleType: 'FIT_CENTER',
       showSpinner: false,
       splashFullScreen: true,
       splashImmersive: true
