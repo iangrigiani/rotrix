@@ -618,10 +618,20 @@
         // Define back button handler immediately (before module scripts load)
         window.handleBackButtonPress = function() {
             const exitApp = () => {
+                // Try multiple methods to exit the app
                 if (window.CapacitorApp && typeof window.CapacitorApp.exitApp === 'function') {
-                    window.CapacitorApp.exitApp();
-                } else if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
-                    window.Capacitor.Plugins.App.exitApp();
+                    try {
+                        window.CapacitorApp.exitApp();
+                    } catch (e) {
+                        console.debug('exitApp error:', e);
+                    }
+                }
+                if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
+                    try {
+                        window.Capacitor.Plugins.App.exitApp();
+                    } catch (e) {
+                        console.debug('Capacitor.Plugins.App.exitApp error:', e);
+                    }
                 }
             };
             
@@ -650,29 +660,42 @@
         // For web/development, we'll handle errors gracefully
         let Capacitor, App, StatusBar, Style, SplashScreen;
         
-        try {
-            // Try to import Capacitor modules
-            // In native apps, these are resolved by Capacitor's runtime
-            // In web, they may not be available
-            const capacitorModule = await import('@capacitor/core').catch(() => null);
-            if (capacitorModule && capacitorModule.Capacitor) {
-                Capacitor = capacitorModule.Capacitor;
-                
-                const appModule = await import('@capacitor/app').catch(() => null);
-                if (appModule) App = appModule.App;
-                
-                const statusBarModule = await import('@capacitor/status-bar').catch(() => null);
-                if (statusBarModule) {
-                    StatusBar = statusBarModule.StatusBar;
-                    Style = statusBarModule.Style;
-                }
-                
-                const splashModule = await import('@capacitor/splash-screen').catch(() => null);
-                if (splashModule) SplashScreen = splashModule.SplashScreen;
+        // First, check if Capacitor is already available from the runtime
+        if (window.Capacitor) {
+            Capacitor = window.Capacitor;
+            // Try to get plugins from Capacitor runtime
+            if (Capacitor.Plugins) {
+                if (Capacitor.Plugins.App) App = Capacitor.Plugins.App;
+                if (Capacitor.Plugins.StatusBar) StatusBar = Capacitor.Plugins.StatusBar;
+                if (Capacitor.Plugins.SplashScreen) SplashScreen = Capacitor.Plugins.SplashScreen;
             }
-        } catch (error) {
-            // Silently handle - modules may not be available in all environments
-            console.debug('Capacitor modules not available (this is normal in some environments)');
+        }
+        
+        // If not available from runtime, try to import modules
+        if (!Capacitor) {
+            try {
+                const capacitorModule = await import('@capacitor/core').catch(() => null);
+                if (capacitorModule && capacitorModule.Capacitor) {
+                    Capacitor = capacitorModule.Capacitor;
+                    
+                    const appModule = await import('@capacitor/app').catch(() => null);
+                    if (appModule && appModule.App) {
+                        App = appModule.App;
+                    }
+                    
+                    const statusBarModule = await import('@capacitor/status-bar').catch(() => null);
+                    if (statusBarModule) {
+                        StatusBar = statusBarModule.StatusBar;
+                        Style = statusBarModule.Style;
+                    }
+                    
+                    const splashModule = await import('@capacitor/splash-screen').catch(() => null);
+                    if (splashModule) SplashScreen = splashModule.SplashScreen;
+                }
+            } catch (error) {
+                // Silently handle - modules may not be available in all environments
+                console.debug('Capacitor modules not available (this is normal in some environments)');
+            }
         }
         
         // Provide fallbacks if modules weren't loaded
@@ -683,10 +706,26 @@
             };
         }
         if (!App) {
-            App = {
-                exitApp: () => {},
-                addListener: () => Promise.resolve({ remove: () => {} })
-            };
+            // Try to get App from Capacitor plugins if available
+            if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
+                App = window.Capacitor.Plugins.App;
+                console.debug('Using App from Capacitor.Plugins.App');
+            } else {
+                // Fallback App object
+                App = {
+                    exitApp: () => {
+                        // Try to exit app through Capacitor plugins
+                        try {
+                            if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
+                                window.Capacitor.Plugins.App.exitApp();
+                            }
+                        } catch (e) {
+                            console.debug('Fallback exitApp error:', e);
+                        }
+                    },
+                    addListener: () => Promise.resolve({ remove: () => {} })
+                };
+            }
         }
         if (!StatusBar) {
             StatusBar = {
@@ -708,7 +747,21 @@
         // Make Capacitor available globally
         window.Capacitor = Capacitor;
         window.isNative = Capacitor.isNativePlatform();
+        
+        // Always try to use the real App from Capacitor.Plugins if available
+        if (Capacitor && Capacitor.Plugins && Capacitor.Plugins.App) {
+            App = Capacitor.Plugins.App;
+            console.debug('Using App from Capacitor.Plugins.App');
+        }
+        
         window.CapacitorApp = App;
+        
+        // Debug: Log if App is available
+        if (App && typeof App.exitApp === 'function') {
+            console.debug('CapacitorApp.exitApp is available');
+        } else {
+            console.debug('CapacitorApp.exitApp is NOT available - using fallback');
+        }
         
         // Expose SplashScreen globally for use in rotrix.js
         if (window.isNative) {
@@ -824,11 +877,26 @@
             
             if (quitButton) {
                 quitButton.addEventListener('click', () => {
-                    if (window.CapacitorApp && typeof window.CapacitorApp.exitApp === 'function') {
-                        window.CapacitorApp.exitApp();
-                    } else if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
-                        window.Capacitor.Plugins.App.exitApp();
-                    }
+                    const exitApp = () => {
+                        // Try multiple methods to exit the app
+                        if (window.CapacitorApp && typeof window.CapacitorApp.exitApp === 'function') {
+                            try {
+                                window.CapacitorApp.exitApp();
+                            } catch (e) {
+                                console.debug('exitApp error:', e);
+                            }
+                        }
+                        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
+                            try {
+                                window.Capacitor.Plugins.App.exitApp();
+                            } catch (e) {
+                                console.debug('Capacitor.Plugins.App.exitApp error:', e);
+                            }
+                        }
+                    };
+                    exitApp();
+                    setTimeout(exitApp, 50);
+                    setTimeout(exitApp, 100);
                 });
             }
         });
