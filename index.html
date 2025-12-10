@@ -993,8 +993,14 @@
             const menu = document.getElementById('mainMenu');
             const game = document.getElementById('gameContainer');
             const highscores = document.getElementById('highscoresScreen');
+            const nameInputDialog = document.getElementById('nameInputDialog');
+            
+            // Hide all other screens
             if (menu) menu.classList.add('hidden');
             if (game) game.classList.add('hidden');
+            if (nameInputDialog) nameInputDialog.classList.add('hidden');
+            
+            // Show highscores screen
             if (highscores) {
                 highscores.classList.remove('hidden');
                 renderHighscores();
@@ -1041,6 +1047,11 @@
             const input = document.getElementById('nameInput');
             
             if (!dialog || !scoreText || !input) return;
+            
+            // Ensure game is paused when showing dialog
+            if (window.rotrixGame && !window.rotrixGame.paused) {
+                window.rotrixGame.paused = true;
+            }
             
             scoreText.textContent = `Score: ${score.toLocaleString()} • Level: ${level}`;
             input.value = '';
@@ -1130,6 +1141,10 @@
                 import('./game/HighscoreManager.js').then(({ HighscoreManager }) => {
                     HighscoreManager.addHighscore(name, window.rotrixGame.score, window.rotrixGame.level);
                     hideNameInputDialog();
+                    // Navigate to highscores menu after saving
+                    if (window.showHighscores) {
+                        window.showHighscores();
+                    }
                 }).catch((error) => {
                     console.error('Error saving highscore:', error);
                     hideNameInputDialog();

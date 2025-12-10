@@ -96,6 +96,7 @@ export class RotrixGame {
         this.spawnCount = 0;
         this.spawnsUntilFlip = this.generateSpawnsUntilFlip();
         this.isFlippingGravity = false; // Flag to prevent actions during flip animation
+        this.isAnimatingLines = false; // Flag to prevent drawing during line clear animation
         
         this.init();
     }
@@ -225,15 +226,25 @@ export class RotrixGame {
                     window.HapticService.lineClear().catch(() => {});
                 }
                 
+                // Set flag to prevent drawing during animation
+                this.isAnimatingLines = true;
+                
                 // Pass the pre-clear board state for correct animation
                 await this.renderer.animateLinesClear(
                     this.board.getLastClearedLines(), 
                     Piece.COLORS,
                     boardBeforeClear
                 );
+                
+                // Clear flag after animation completes
+                this.isAnimatingLines = false;
+                
                 this.updateScore(GAME_CONFIG.LINE_POINTS[linesCleared] || 
                     GAME_CONFIG.LINE_POINTS[1] * linesCleared);
                 this.updateLines(linesCleared);
+                
+                // Redraw board after animation
+                this.draw();
             }
             
             if (!this.gameOver) {
@@ -320,6 +331,8 @@ export class RotrixGame {
 
 
     endGame() {
+        // FIRST: Pause the game immediately
+        this.paused = true;
         this.gameOver = true;
         this.piece.current = null;
         
@@ -328,18 +341,18 @@ export class RotrixGame {
             window.HapticService.gameOver().catch(() => {});
         }
         
-        // Check if score qualifies for highscore
-        if (HighscoreManager.qualifiesForHighscore(this.score)) {
-            // Show name input dialog
-            this.showNameInputDialog();
-        }
-        
-        //this.logger.logGameOver(this.score, this.level, this.logger.pieceCounter);
-        
+        // Stop animation frame
         if (this.animationFrameId) {
             cancelAnimationFrame(this.animationFrameId);
         }
         
+        // THEN: Check if score qualifies for highscore (top 5)
+        if (HighscoreManager.qualifiesForHighscore(this.score)) {
+            // Show name input dialog (game is already paused)
+            this.showNameInputDialog();
+        }
+        
+        //this.logger.logGameOver(this.score, this.level, this.logger.pieceCounter);
         this.logger.printSummary();
     }
 
@@ -368,6 +381,7 @@ export class RotrixGame {
         this.spawnCount = 0;
         this.spawnsUntilFlip = this.generateSpawnsUntilFlip();
         this.isFlippingGravity = false;
+        this.isAnimatingLines = false;
         this.updateScore(0);
         this.updateLines(0);
         this.levelDisplay.textContent = this.level;
@@ -380,6 +394,11 @@ export class RotrixGame {
     }
 
     draw() {
+        // Don't draw during line clear animation (animation handles its own drawing)
+        if (this.isAnimatingLines) {
+            return;
+        }
+        
         this.renderer.clear();
         this.renderer.drawBoard(this.board, Piece.COLORS);
         this.renderer.drawNextPiece(this.piece, Piece.COLORS);
@@ -444,7 +463,15 @@ export class RotrixGame {
     }
 
     togglePause() {
+        // Don't allow unpausing if game is over or if name input dialog is showing
         if (this.gameOver) return;
+        
+        // Check if name input dialog is visible
+        const nameInputDialog = document.getElementById('nameInputDialog');
+        if (nameInputDialog && !nameInputDialog.classList.contains('hidden')) {
+            // Don't allow unpausing while name input dialog is shown
+            return;
+        }
         
         this.paused = !this.paused;
         this.logger.log('GAME_PAUSED', {
@@ -491,6 +518,11 @@ export class RotrixGame {
     }
     
     showNameInputDialog() {
+        // Ensure game is paused when showing dialog
+        if (!this.paused) {
+            this.paused = true;
+        }
+        
         // Show name input dialog for highscore
         if (window.showNameInputDialog) {
             window.showNameInputDialog(this.score, this.level);
@@ -570,15 +602,25 @@ export class RotrixGame {
                 window.HapticService.lineClear().catch(() => {});
             }
             
+            // Set flag to prevent drawing during animation
+            this.isAnimatingLines = true;
+            
             // Animate line clearing
             await this.renderer.animateLinesClear(
                 this.board.getLastClearedLines(), 
                 Piece.COLORS,
                 boardBeforeClear
             );
+            
+            // Clear flag after animation completes
+            this.isAnimatingLines = false;
+            
             this.updateScore(GAME_CONFIG.LINE_POINTS[linesCleared] || 
                 GAME_CONFIG.LINE_POINTS[1] * linesCleared);
             this.updateLines(linesCleared);
+            
+            // Redraw board after animation
+            this.draw();
         }
         
         // Restore piece and adjust its position

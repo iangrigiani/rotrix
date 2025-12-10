@@ -26,8 +26,8 @@ export const GAME_CONFIG = {
     // Configuración de animaciones
     ANIMATIONS: {
         LINE_CLEAR: {
-            BASE_DURATION: 200,    // Duración base para una línea (ms)
-            MULTIPLIER: 1.5,       // Multiplicador por cada línea adicional
+            BASE_DURATION: 500,    // Duración base para una línea (ms)
+            MULTIPLIER: 2.5,       // Multiplicador por cada línea adicional
             FLASH_COLOR: '#FFF'    // Color del destello
         }
     }

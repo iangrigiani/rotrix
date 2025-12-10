@@ -255,14 +255,19 @@ export class Renderer {
         // Support both Board objects and raw grid arrays
         const grid = Array.isArray(boardState) ? boardState : boardState.grid;
         const width = Array.isArray(boardState) ? boardState[0].length : boardState.width;
+        const height = Array.isArray(boardState) ? boardState.length : boardState.height;
         
         // Pre-calculate positions for better performance
         const lineBlocks = [];
+        const lineYPositions = new Set(lines); // For quick lookup
+        
         lines.forEach(y => {
             for (let x = 0; x < width; x++) {
                 lineBlocks.push({
                     x: x * this.blockSize,
                     y: y * this.blockSize,
+                    gridX: x,
+                    gridY: y,
                     originalColor: grid[y] && grid[y][x] ? colors[grid[y][x]] : null
                 });
             }
@@ -273,20 +278,46 @@ export class Renderer {
         const flashDuration = duration / 6;
         
         for (let flash = 0; flash < 3; flash++) {
-            // Flash white
-            this.ctx.fillStyle = flashColor;
-            lineBlocks.forEach(block => {
-                this.ctx.fillRect(block.x, block.y, this.blockSizeMinus1, this.blockSizeMinus1);
-            });
+            // Clear canvas and draw complete board state
+            this.clear();
+            
+            // Draw the entire board, but flash the lines being cleared
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    const cellValue = grid[y] && grid[y][x];
+                    if (cellValue) {
+                        const isLineBeingCleared = lineYPositions.has(y);
+                        // Flash white if it's part of a line being cleared
+                        this.ctx.fillStyle = isLineBeingCleared ? flashColor : colors[cellValue];
+                        this.ctx.fillRect(
+                            x * this.blockSize,
+                            y * this.blockSize,
+                            this.blockSizeMinus1,
+                            this.blockSizeMinus1
+                        );
+                    }
+                }
+            }
+            
             await new Promise(resolve => setTimeout(resolve, flashDuration));
             
-            // Restore original colors
-            lineBlocks.forEach(block => {
-                if (block.originalColor) {
-                    this.ctx.fillStyle = block.originalColor;
-                    this.ctx.fillRect(block.x, block.y, this.blockSizeMinus1, this.blockSizeMinus1);
+            // Restore original colors (draw board normally)
+            this.clear();
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    const cellValue = grid[y] && grid[y][x];
+                    if (cellValue) {
+                        this.ctx.fillStyle = colors[cellValue];
+                        this.ctx.fillRect(
+                            x * this.blockSize,
+                            y * this.blockSize,
+                            this.blockSizeMinus1,
+                            this.blockSizeMinus1
+                        );
+                    }
                 }
-            });
+            }
+            
             await new Promise(resolve => setTimeout(resolve, flashDuration));
         }
     }

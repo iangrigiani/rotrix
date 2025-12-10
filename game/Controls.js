@@ -27,6 +27,12 @@ export class Controls {
 
             // Pause toggle (works even when paused)
             if (e.key === 'p' || e.key === 'P') {
+                // Check if name input dialog is visible - don't allow unpausing
+                const nameInputDialog = document.getElementById('nameInputDialog');
+                if (nameInputDialog && !nameInputDialog.classList.contains('hidden')) {
+                    return; // Don't allow unpausing while name input dialog is shown
+                }
+                
                 // If showing quit confirmation, resume from it
                 if (this.game.showingQuitConfirmation) {
                     this.game.resumeFromQuitConfirmation();
