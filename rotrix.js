@@ -435,8 +435,8 @@ export class RotrixGame {
     gameLoop(currentTime = 0) {
         if (this.gameOver || !this.gameStarted) return;
         
-        // Skip game updates when paused or flipping gravity, but continue drawing
-        if (!this.paused && !this.isFlippingGravity) {
+        // Skip game updates when paused, flipping gravity, or animating lines, but continue drawing
+        if (!this.paused && !this.isFlippingGravity && !this.isAnimatingLines) {
             // Handle inertia movement
             if (this.inertiaActive && Math.abs(this.inertiaVelocity) > 0.05) {
                 const blockSize = this.blockSize;
@@ -507,8 +507,8 @@ export class RotrixGame {
     }
     
     showQuitConfirmation() {
-        // Pause game and show quit confirmation
-        if (!this.paused && !this.gameOver) {
+        // Pause game and show quit confirmation (works even during gravity flip)
+        if (!this.gameOver) {
             this.paused = true;
             this.showingQuitConfirmation = true;
             this.logger.log('GAME_PAUSED', {

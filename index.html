@@ -784,7 +784,11 @@
                     exitApp();
                     setTimeout(exitApp, 50);
                 } else {
-                    // First press - show quit confirmation
+                    // First press - show quit confirmation (works even during gravity flip)
+                    // Pause the game immediately, even if gravity is flipping
+                    if (!window.rotrixGame.paused) {
+                        window.rotrixGame.paused = true;
+                    }
                     window.rotrixGame.showQuitConfirmation();
                 }
             } else {

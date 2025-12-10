@@ -332,7 +332,14 @@ export class Renderer {
         const maxIterations = 100; // Safety limit to prevent infinite loops
         let totalFallDistance = 0; // Track total distance fallen for scoring
         
-        while (hasPiecesFalling && iteration < maxIterations) {
+        // Helper function to check if animation should continue
+        const shouldContinueAnimation = () => {
+            if (!window.rotrixGame) return false;
+            // Stop animation if game is paused or showing quit confirmation
+            return !window.rotrixGame.paused && !window.rotrixGame.showingQuitConfirmation;
+        };
+        
+        while (hasPiecesFalling && iteration < maxIterations && shouldContinueAnimation()) {
             iteration++;
             hasPiecesFalling = false;
             
@@ -413,7 +420,18 @@ export class Renderer {
                 const steps = fallDistance;
                 const stepDelay = 5; // ms per step
                 
+                let animationInterrupted = false;
+                let actualStepsCompleted = 0;
                 for (let step = 0; step <= steps; step++) {
+                    // Check if animation should continue
+                    if (!shouldContinueAnimation()) {
+                        // Animation interrupted - mark it and record steps completed
+                        animationInterrupted = true;
+                        actualStepsCompleted = step;
+                        break;
+                    }
+                    actualStepsCompleted = step;
+                    
                     // Clear and redraw board
                     this.clear();
                     
@@ -461,17 +479,33 @@ export class Renderer {
                     await new Promise(resolve => setTimeout(resolve, stepDelay));
                 }
                 
-                // Update board: move the body (use bodyToFall which has current positions)
-                board.moveBody(bodyToFall, fallDistance * direction, updatedBodyIdArray);
+                // Update board: move the body to its final position
+                // If animation was interrupted, only move the distance that was actually animated
+                const distanceToMove = animationInterrupted ? actualStepsCompleted : fallDistance;
+                if (distanceToMove > 0) {
+                    board.moveBody(bodyToFall, distanceToMove * direction, updatedBodyIdArray);
+                    
+                    // Track fall distance for scoring
+                    totalFallDistance += distanceToMove;
+                    
+                    // Update the original body reference
+                    originalBody.blocks = bodyToFall.blocks.map(b => ({ ...b }));
+                }
                 
-                // Track fall distance for scoring
-                totalFallDistance += fallDistance;
+                // If animation was interrupted, stop processing more pieces
+                if (animationInterrupted) {
+                    hasPiecesFalling = false;
+                    break;
+                }
                 
-                // Update the original body reference
-                originalBody.blocks = bodyToFall.blocks.map(b => ({ ...b }));
-                
-                // Wait 0.5 seconds before next piece falls
-                await new Promise(resolve => setTimeout(resolve, 500));
+                // Wait 0.5 seconds before next piece falls (only if not paused)
+                if (shouldContinueAnimation()) {
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                } else {
+                    // Paused during wait - break out
+                    hasPiecesFalling = false;
+                    break;
+                }
             }
             
             // After processing all pieces in this iteration, loop will continue
