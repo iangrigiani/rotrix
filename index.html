@@ -1024,12 +1024,17 @@
                     const rank = index + 1;
                     const date = new Date(hs.date);
                     const dateStr = date.toLocaleDateString();
+                    const lines = hs.lines;
+                    // Only show lines if it exists and is greater than 0
+                    const linesText = (lines !== undefined && lines !== null && lines > 0) 
+                        ? ` • ${lines} lines` 
+                        : '';
                     return `
                         <div class="highscore-item">
                             <div class="highscore-rank">${rank}</div>
                             <div class="highscore-info">
                                 <div class="highscore-name">${hs.name}</div>
-                                <div class="highscore-details">Level ${hs.level} • ${dateStr}</div>
+                                <div class="highscore-details">Level ${hs.level}${linesText} • ${dateStr}</div>
                             </div>
                             <div class="highscore-score">${hs.score.toLocaleString()}</div>
                         </div>
@@ -1042,11 +1047,23 @@
         
         // Name input dialog functions
         window.showNameInputDialog = function(score, level) {
+            console.log('[Dialog] showNameInputDialog called with score:', score, 'level:', level);
             const dialog = document.getElementById('nameInputDialog');
             const scoreText = document.getElementById('nameInputScore');
             const input = document.getElementById('nameInput');
             
-            if (!dialog || !scoreText || !input) return;
+            if (!dialog) {
+                console.error('[Dialog] nameInputDialog element not found!');
+                return;
+            }
+            if (!scoreText) {
+                console.error('[Dialog] nameInputScore element not found!');
+                return;
+            }
+            if (!input) {
+                console.error('[Dialog] nameInput element not found!');
+                return;
+            }
             
             // Ensure game is paused when showing dialog
             if (window.rotrixGame && !window.rotrixGame.paused) {
@@ -1056,6 +1073,7 @@
             scoreText.textContent = `Score: ${score.toLocaleString()} • Level: ${level}`;
             input.value = '';
             dialog.classList.remove('hidden');
+            console.log('[Dialog] Name input dialog shown');
             setTimeout(() => input.focus(), 100);
         };
         
@@ -1128,8 +1146,16 @@
             }
             
             function saveHighscore() {
+                console.log('[Save] saveHighscore called');
                 const input = document.getElementById('nameInput');
-                if (!input || !window.rotrixGame) return;
+                if (!input) {
+                    console.error('[Save] nameInput element not found!');
+                    return;
+                }
+                if (!window.rotrixGame) {
+                    console.error('[Save] rotrixGame not available!');
+                    return;
+                }
                 
                 const name = input.value.trim();
                 if (name.length === 0) {
@@ -1137,16 +1163,27 @@
                     return;
                 }
                 
+                const score = window.rotrixGame.score;
+                const level = window.rotrixGame.level;
+                const lines = window.rotrixGame.totalLines || 0;
+                
+                console.log('[Save] Saving highscore:', { name, score, level, lines });
+                
                 // Import HighscoreManager and save
                 import('./game/HighscoreManager.js').then(({ HighscoreManager }) => {
-                    HighscoreManager.addHighscore(name, window.rotrixGame.score, window.rotrixGame.level);
+                    const success = HighscoreManager.addHighscore(name, score, level, lines);
+                    console.log('[Save] addHighscore returned:', success);
+                    
                     hideNameInputDialog();
+                    
                     // Navigate to highscores menu after saving
                     if (window.showHighscores) {
                         window.showHighscores();
+                    } else {
+                        console.error('[Save] showHighscores function not available!');
                     }
                 }).catch((error) => {
-                    console.error('Error saving highscore:', error);
+                    console.error('[Save] Error saving highscore:', error);
                     hideNameInputDialog();
                 });
             }

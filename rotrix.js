@@ -347,9 +347,16 @@ export class RotrixGame {
         }
         
         // THEN: Check if score qualifies for highscore (top 5)
-        if (HighscoreManager.qualifiesForHighscore(this.score)) {
+        console.log('[Game] Game over. Score:', this.score, 'Level:', this.level, 'Lines:', this.totalLines);
+        const qualifies = HighscoreManager.qualifiesForHighscore(this.score);
+        console.log('[Game] Score qualifies for highscore:', qualifies);
+        
+        if (qualifies) {
             // Show name input dialog (game is already paused)
+            console.log('[Game] Showing name input dialog');
             this.showNameInputDialog();
+        } else {
+            console.log('[Game] Score does not qualify for highscore');
         }
         
         //this.logger.logGameOver(this.score, this.level, this.logger.pieceCounter);
