@@ -291,7 +291,7 @@ export class Renderer {
         }
     }
 
-    async animateGravityFlip(board, colors, wasGravityDown) {
+    async animateGravityFlip(board, colors, wasGravityDown, scoreCallback = null) {
         // New gravity direction (opposite of wasGravityDown)
         const newGravityDown = !wasGravityDown;
         
@@ -299,6 +299,7 @@ export class Renderer {
         let hasPiecesFalling = true;
         let iteration = 0;
         const maxIterations = 100; // Safety limit to prevent infinite loops
+        let totalFallDistance = 0; // Track total distance fallen for scoring
         
         while (hasPiecesFalling && iteration < maxIterations) {
             iteration++;
@@ -432,6 +433,9 @@ export class Renderer {
                 // Update board: move the body (use bodyToFall which has current positions)
                 board.moveBody(bodyToFall, fallDistance * direction, updatedBodyIdArray);
                 
+                // Track fall distance for scoring
+                totalFallDistance += fallDistance;
+                
                 // Update the original body reference
                 originalBody.blocks = bodyToFall.blocks.map(b => ({ ...b }));
                 
@@ -441,6 +445,11 @@ export class Renderer {
             
             // After processing all pieces in this iteration, loop will continue
             // to recalculate and process any pieces that can still fall
+        }
+        
+        // Award points for all pieces that fell (same as if they fell naturally)
+        if (scoreCallback && totalFallDistance > 0) {
+            scoreCallback(totalFallDistance);
         }
     }
 

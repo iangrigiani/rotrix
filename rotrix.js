@@ -305,6 +305,11 @@ export class RotrixGame {
         // Move piece to the final valid position
         if (currentPos.y !== this.piece.position.y) {
             const oldPos = { ...this.piece.position };
+            const fallDistance = Math.abs(currentPos.y - oldPos.y);
+            
+            // Award points for the distance dropped (same as if it fell naturally)
+            this.updateScore(GAME_CONFIG.TICK_POINTS * fallDistance);
+            
             this.piece.position = currentPos;
             this.logger.logPieceMove(this.piece, oldPos, currentPos, 'HARD_DROP');
             
@@ -531,7 +536,16 @@ export class RotrixGame {
         
         // Animate pieces falling to the opposite side
         // The animation updates the board as pieces fall
-        await this.renderer.animateGravityFlip(this.board, Piece.COLORS, oldGravityDown);
+        // Pass a callback to award points for pieces that fall
+        await this.renderer.animateGravityFlip(
+            this.board, 
+            Piece.COLORS, 
+            oldGravityDown,
+            (fallDistance) => {
+                // Award points for distance fallen (same as if pieces fell naturally)
+                this.updateScore(GAME_CONFIG.TICK_POINTS * fallDistance);
+            }
+        );
         
         // Save AFTER state visualization
         //const afterVisualization = this.board.visualizePieceIdGrid();
