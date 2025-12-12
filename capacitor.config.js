@@ -19,9 +19,6 @@ const config = {
     StatusBar: {
       style: 'dark',
       backgroundColor: '#1a1a1a'
-    },
-    AdMob: {
-      appId: 'ca-app-pub-3940256099942544~3347511713' // Test app ID - replace with your own from AdMob console
     }
   }
 };

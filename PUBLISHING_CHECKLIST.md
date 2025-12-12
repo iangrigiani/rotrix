@@ -7,7 +7,6 @@ Use this checklist to ensure everything is ready before submitting to Google Pla
 ### Accounts
 - [ ] Google Play Developer account created ($25)
 - [ ] Apple Developer account created ($99/year)
-- [ ] AdMob account created (for ads)
 - [ ] Privacy policy URL prepared
 
 ## App Assets
@@ -56,15 +55,6 @@ Use this checklist to ensure everything is ready before submitting to Google Pla
 
 ## Code Configuration
 
-### AdMob Setup
-- [ ] AdMob app ID added to `capacitor.config.js`
-- [ ] Test ad IDs replaced with production IDs in `src/native/ads.js`
-- [ ] `isTesting` set to `false` in ad options
-- [ ] Ad units created in AdMob console:
-  - [ ] Banner ad unit
-  - [ ] Interstitial ad unit
-  - [ ] Rewarded ad unit (if using)
-
 ### In-App Purchases (if implementing)
 - [ ] IAP plugin installed and configured
 - [ ] Products created in Google Play Console
@@ -106,7 +96,6 @@ Use this checklist to ensure everything is ready before submitting to Google Pla
 - [ ] Tested on multiple screen sizes
 - [ ] Tested in portrait and landscape
 - [ ] Tested on physical devices
-- [ ] Tested ad display (with test ads)
 - [ ] Tested app pause/resume
 - [ ] Tested back button behavior
 
@@ -151,7 +140,6 @@ Use this checklist to ensure everything is ready before submitting to Google Pla
 - [ ] Tested on iPad (if supporting)
 - [ ] Tested in portrait and landscape
 - [ ] Tested on physical devices
-- [ ] Tested ad display (with test ads)
 - [ ] Tested app backgrounding/foregrounding
 - [ ] Tested on TestFlight
 
@@ -168,7 +156,6 @@ Use this checklist to ensure everything is ready before submitting to Google Pla
 - [ ] Game starts correctly
 - [ ] Touch controls work properly
 - [ ] Haptic feedback works
-- [ ] Ads display correctly (test mode)
 - [ ] App handles backgrounding correctly
 - [ ] No crashes during gameplay
 - [ ] Performance is acceptable

@@ -49,30 +49,6 @@
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
 		<false/>
-		<key>NSExceptionDomains</key>
-		<dict>
-			<key>googleadservices.com</key>
-			<dict>
-				<key>NSIncludesSubdomains</key>
-				<true/>
-				<key>NSThirdPartyExceptionRequiresForwardSecrecy</key>
-				<false/>
-			</dict>
-			<key>googlesyndication.com</key>
-			<dict>
-				<key>NSIncludesSubdomains</key>
-				<true/>
-				<key>NSThirdPartyExceptionRequiresForwardSecrecy</key>
-				<false/>
-			</dict>
-			<key>doubleclick.net</key>
-			<dict>
-				<key>NSIncludesSubdomains</key>
-				<true/>
-				<key>NSThirdPartyExceptionRequiresForwardSecrecy</key>
-				<false/>
-			</dict>
-		</dict>
 	</dict>
 	<key>SKAdNetworkItems</key>
 	<array>

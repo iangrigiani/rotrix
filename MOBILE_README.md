@@ -149,14 +149,6 @@ Haptic feedback is automatically integrated into game actions:
 - Gravity flips
 - Game over
 
-### Ads (AdMob)
-Ads are configured but use test ad IDs by default. To enable real ads:
-
-1. Create an AdMob account
-2. Create ad units in AdMob console
-3. Update `src/native/ads.js` with your ad unit IDs
-4. Set `isTesting: false` in ad options
-
 ### In-App Purchases
 The purchase system is set up as a placeholder. To implement:
 
@@ -186,7 +178,6 @@ Update version in:
 - [ ] Update app name and description in `strings.xml`
 - [ ] Set up signing keystore
 - [ ] Update `versionCode` and `versionName` in `build.gradle`
-- [ ] Replace test AdMob IDs with production IDs
 - [ ] Test on multiple Android devices/versions
 - [ ] Prepare screenshots (phone, 7" tablet, 10" tablet)
 - [ ] Write app description and privacy policy
@@ -197,7 +188,6 @@ Update version in:
 - [ ] Configure App Store Connect listing
 - [ ] Set up App Store Connect app record
 - [ ] Update version numbers in Xcode
-- [ ] Replace test AdMob IDs with production IDs
 - [ ] Test on multiple iOS devices/versions
 - [ ] Prepare screenshots (all required device sizes)
 - [ ] Write app description and privacy policy
