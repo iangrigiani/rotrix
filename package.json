@@ -15,6 +15,7 @@
     "cap:run:ios": "npm run cap:sync && npx cap run ios",
     "android:build": "npm run cap:sync && cd android && ./gradlew assembleRelease",
     "android:build:debug": "npm run cap:sync && cd android && ./gradlew assembleDebug",
+    "android:build:bundle": "npm run cap:sync && cd android && ./gradlew bundleRelease",
     "android:install": "cd android && ./gradlew installDebug",
     "ios:build": "npm run cap:sync && echo 'Open Xcode and build from there: npm run cap:open:ios'"
   },
